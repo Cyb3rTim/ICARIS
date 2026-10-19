@@ -1,3 +1,2 @@
-Django>=4.2,<5.0
-django-crispy-forms>=2.0
-crispy-bootstrap5>=0.7
+# Runtime dependencies (pinned). Django 5.2 is the current LTS line (supported to April 2028).
+Django==5.2.18

@@ -79,6 +79,7 @@ class IssueForm(forms.ModelForm):
         model = Issue
         fields = [
             'title', 'description', 'priority', 'status',
+            'system', 'control', 'source',
             'department', 'assigned_to', 'related_risk',
             'related_audit', 'due_date', 'resolution_notes'
         ]
@@ -93,7 +94,15 @@ class IssueForm(forms.ModelForm):
             'related_audit': forms.Select(attrs={'class': 'form-control'}),
             'due_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'resolution_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'system': forms.Select(attrs={'class': 'form-control'}),
+            'control': forms.Select(attrs={'class': 'form-control'}),
+            'source': forms.Select(attrs={'class': 'form-control'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only active controls; ~1,000 options is fine for a select but skip withdrawn ones.
+        self.fields['control'].queryset = self.fields['control'].queryset.filter(withdrawn=False)
 
 class ArtifactForm(forms.ModelForm):
     class Meta:

@@ -1,0 +1,5 @@
+{% if auth %}
+    {% if auth.is_authorized %}<span class="pill {% if auth.ongoing_authorization %}ok{% else %}{{ auth.expiry_state }}{% endif %}">{{ auth.get_decision_display }}</span>
+    {% elif auth.decision == 'dato' %}<span class="pill denied">Authorization denied</span>
+    {% else %}<span class="pill expired">Authorization expired</span>{% endif %}
+{% else %}<span class="pill none">Not yet authorized</span>{% endif %}

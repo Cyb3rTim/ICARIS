@@ -59,6 +59,7 @@ class PoamWorkflowTests(TestCase):
             "description": "SC-13 finding",
             "priority": "high",
             "status": "open",
+            "source": "assessment",
             "department": self.dept.pk,
             "due_date": "2026-12-01",
         })

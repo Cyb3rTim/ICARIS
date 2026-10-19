@@ -1,0 +1,68 @@
+{% extends 'grc_dashboard/base.html' %}
+
+{% block title %}NIST SP 800-53 Catalog - ICARIS{% endblock %}
+{% block nav_catalog %}active{% endblock %}
+{% block extra_css %}{% include 'ato/_styles.html' %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>NIST SP 800-53 Control Catalog</h1>
+        <p class="subtitle">{% if version %}Rev 5 (OSCAL v{{ version }}) &middot; {% endif %}{{ total }} controls and enhancements match.</p>
+    </div>
+</div>
+
+{% if not version %}
+<div class="callout">The catalog is empty. Run <code>python manage.py import_oscal_catalog</code> to load it.</div>
+{% endif %}
+
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-5">
+            <label class="form-label">Search</label>
+            <input type="search" name="q" value="{{ query }}" class="form-control" placeholder="e.g. AC-2, encryption, multi-factor">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Family</label>
+            <select name="family" class="form-select">
+                <option value="">All families</option>
+                {% for fam in families %}<option value="{{ fam.code }}" {% if family == fam.code %}selected{% endif %}>{{ fam.code }} - {{ fam.title }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Baseline</label>
+            <select name="baseline" class="form-select">
+                <option value="">Any</option>
+                <option value="low" {% if baseline == 'low' %}selected{% endif %}>Low</option>
+                <option value="moderate" {% if baseline == 'moderate' %}selected{% endif %}>Moderate</option>
+                <option value="high" {% if baseline == 'high' %}selected{% endif %}>High</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end gap-2">
+            <button type="submit" class="btn-filter flex-grow-1"><i class="fas fa-filter me-2"></i>Filter</button>
+            <a href="{% url 'ato:control_list' %}" class="btn-clear"><i class="fas fa-times"></i></a>
+        </div>
+    </form>
+</div>
+
+<div class="table-card">
+    <table class="custom-table">
+        <thead><tr><th>Control</th><th>Title</th><th>Family</th><th>Low</th><th>Mod</th><th>High</th></tr></thead>
+        <tbody>
+        {% for c in page %}
+            <tr>
+                <td><a href="{% url 'ato:control_detail' c.control_id %}"><strong>{{ c.label }}</strong></a></td>
+                <td>{% if c.parent_id %}<span style="color:#86868b;">&#8627;</span> {% endif %}{{ c.title }}</td>
+                <td>{{ c.family.code }}</td>
+                <td>{% if c.in_low %}<i class="fas fa-check" style="color:#059669"></i>{% endif %}</td>
+                <td>{% if c.in_moderate %}<i class="fas fa-check" style="color:#059669"></i>{% endif %}</td>
+                <td>{% if c.in_high %}<i class="fas fa-check" style="color:#059669"></i>{% endif %}</td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="6"><div class="empty-state"><i class="fas fa-book"></i><p>No controls match.</p></div></td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% include 'ato/_pagination.html' %}
+</div>
+{% endblock %}

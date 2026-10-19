@@ -1,0 +1,41 @@
+{% extends 'grc_dashboard/base.html' %}
+
+{% block title %}{{ impl.control.label }} · {{ impl.system.acronym }} - ICARIS{% endblock %}
+{% block nav_systems %}active{% endblock %}
+{% block extra_css %}{% include 'ato/_styles.html' %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <p class="subtitle" style="margin-bottom:4px;"><a href="{% url 'ato:system_detail' impl.system.pk %}?family={{ impl.control.family.code }}">&larr; {{ impl.system.acronym }}</a></p>
+        <h1>{{ impl.control.label }} {{ impl.control.title }}</h1>
+        <p class="subtitle">Implementation for {{ impl.system.name }}</p>
+    </div>
+</div>
+
+<div class="split">
+    <div class="filter-card">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="row g-3">
+                {% for field in form %}
+                <div class="{% if field.field.widget.attrs.rows %}col-md-12{% else %}col-md-6{% endif %}">
+                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}<small class="form-help">{{ field.help_text }}</small>{% endif %}
+                    {% if field.errors %}<div class="field-error">{{ field.errors|join:" " }}</div>{% endif %}
+                </div>
+                {% endfor %}
+                <div class="col-md-12" style="margin-top: 12px;">
+                    <button type="submit" class="btn-primary-custom"><i class="fas fa-save"></i> Save</button>
+                    <a href="{% url 'ato:system_detail' impl.system.pk %}" class="btn-clear" style="margin-left: 12px;"><i class="fas fa-times"></i> Cancel</a>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="panel">
+        <h2>Control statement (NIST SP 800-53 Rev 5)</h2>
+        <div class="statement">{{ impl.control.statement|default:"No statement text in the catalog." }}</div>
+    </div>
+</div>
+{% endblock %}

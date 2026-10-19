@@ -10,4 +10,6 @@ class GrcDashboardConfig(AppConfig):
     def ready(self):
         from .roles import sync_roles
 
-        post_migrate.connect(sync_roles, sender=self)
+        # Run after every app's migrate signal (not just this app's) so that
+        # permissions belonging to apps listed later, such as ato, exist first.
+        post_migrate.connect(sync_roles, dispatch_uid="icaris_sync_roles")

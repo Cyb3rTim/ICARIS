@@ -1,0 +1,50 @@
+{% extends 'grc_dashboard/base.html' %}
+
+{% block title %}{{ control.label }} - ICARIS{% endblock %}
+{% block nav_catalog %}active{% endblock %}
+{% block extra_css %}{% include 'ato/_styles.html' %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <p class="subtitle" style="margin-bottom:4px;"><a href="{% url 'ato:control_list' %}?family={{ control.family.code }}">&larr; {{ control.family.code }} - {{ control.family.title }}</a></p>
+        <h1>{{ control.label }} {{ control.title }}</h1>
+        <div class="meta-row" style="margin-top:8px;">
+            {% if control.parent %}<span class="pill">Enhancement of <a href="{% url 'ato:control_detail' control.parent.control_id %}">&nbsp;{{ control.parent.label }}</a></span>{% endif %}
+            {% if control.in_low %}<span class="pill low">Low baseline</span>{% endif %}
+            {% if control.in_moderate %}<span class="pill moderate">Moderate baseline</span>{% endif %}
+            {% if control.in_high %}<span class="pill high">High baseline</span>{% endif %}
+            {% if not control.in_low and not control.in_moderate and not control.in_high %}<span class="pill none">Not in a baseline</span>{% endif %}
+            {% if control.withdrawn %}<span class="pill expired">Withdrawn</span>{% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="split">
+    <div>
+        <div class="panel">
+            <h2>Control statement</h2>
+            <div class="statement">{{ control.statement|default:"No statement text (withdrawn or incorporated into another control)." }}</div>
+        </div>
+        {% if enhancements %}
+        <div class="panel">
+            <h2>Enhancements</h2>
+            {% for e in enhancements %}
+                <div style="padding:6px 0; font-size:14px;"><a href="{% url 'ato:control_detail' e.control_id %}"><strong>{{ e.label }}</strong></a> {{ e.title }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    <div class="panel">
+        <h2>Implemented by</h2>
+        {% for impl in implementations %}
+            <div style="padding:8px 0; border-bottom:1px solid #f0f0f2; font-size:14px;">
+                <a href="{% url 'ato:system_detail' impl.system.pk %}"><strong>{{ impl.system.acronym }}</strong></a>
+                <span class="status-badge {% if impl.status == 'implemented' %}compliant{% elif impl.status == 'not_started' %}critical{% else %}in_progress{% endif %}" style="margin-left:6px;">{{ impl.get_status_display }}</span>
+            </div>
+        {% empty %}
+            <p style="color:#86868b; font-size:14px; margin:0;">No system tracks this control yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

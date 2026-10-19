@@ -1,0 +1,4 @@
+{% if pkg.ongoing_authorization %}<span class="pill ok">Ongoing authorization</span>
+{% elif pkg.expiry_state == 'expired' %}<span class="pill expired">Expired {{ pkg.expiration_date|timesince }} ago</span>
+{% elif pkg.expiry_state == 'none' %}<span class="pill none">No termination date</span>
+{% else %}<span class="pill {{ pkg.expiry_state }}">{{ pkg.days_until_expiration }} day{{ pkg.days_until_expiration|pluralize }} left</span>{% endif %}

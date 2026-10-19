@@ -1,0 +1,76 @@
+{% extends 'grc_dashboard/base.html' %}
+
+{% block title %}Systems &amp; ATO - ICARIS{% endblock %}
+{% block nav_systems %}active{% endblock %}
+{% block extra_css %}{% include 'ato/_styles.html' %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Systems &amp; Authorizations</h1>
+        <p class="subtitle">FIPS 199 categorization, control implementation and ATO status for every system.</p>
+    </div>
+    {% if perms.ato.add_informationsystem %}
+    <a href="{% url 'ato:system_create' %}" class="btn-primary-custom"><i class="fas fa-plus"></i>Register System</a>
+    {% endif %}
+</div>
+
+{% if not catalog_loaded %}
+<div class="callout">
+    The NIST SP 800-53 catalog is not loaded yet. Run <code>python manage.py import_oscal_catalog</code> to load the
+    Rev 5 controls and Low/Moderate/High baselines.
+</div>
+{% endif %}
+
+{% if expiring %}
+<div class="panel">
+    <h2><i class="fas fa-hourglass-half" style="color:#ea580c"></i> Authorizations ending within 180 days</h2>
+    <table class="custom-table">
+        <thead><tr><th>System</th><th>Decision</th><th>Termination date</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for pkg in expiring %}
+            <tr>
+                <td><a href="{% url 'ato:system_detail' pkg.system.pk %}"><strong>{{ pkg.system.acronym }}</strong></a> {{ pkg.system.name }}</td>
+                <td>{{ pkg.get_decision_display }}</td>
+                <td>{{ pkg.expiration_date }}</td>
+                <td>{% include 'ato/_expiry_pill.html' with pkg=pkg %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<div class="ato-grid">
+    {% for row in rows %}
+    {% with s=row.system auth=row.auth sm=row.summary %}
+    <a class="system-card" href="{% url 'ato:system_detail' s.pk %}">
+        <div>
+            <div class="acronym">{{ s.acronym }}</div>
+            <h3>{{ s.name }}</h3>
+        </div>
+        <div class="meta-row">
+            <span class="pill {{ s.categorization }}">{{ s.get_categorization_display }} impact</span>
+            <span class="pill">RMF: {{ s.get_rmf_step_display }}</span>
+            {% include 'ato/_auth_pill.html' with auth=auth %}
+        </div>
+        <div>
+            <div class="meta-row" style="justify-content: space-between;">
+                <span>Controls implemented</span><strong>{{ sm.percent_implemented }}%</strong>
+            </div>
+            <div class="progress green"><span style="width: {{ sm.percent_implemented }}%"></span></div>
+        </div>
+        <div class="meta-row">
+            <span><i class="fas fa-list-check"></i> {{ sm.total }} controls tracked</span>
+            <span><i class="fas fa-tasks"></i> {{ s.open_poams }} open POA&amp;M{{ s.open_poams|pluralize }}</span>
+            {% if s.isso %}<span><i class="fas fa-user-shield"></i> {{ s.isso.get_full_name|default:s.isso.username }}</span>{% endif %}
+        </div>
+    </a>
+    {% endwith %}
+    {% empty %}
+    <div class="panel" style="grid-column: 1 / -1;">
+        <div class="empty-state"><i class="fas fa-server"></i><p>No systems registered yet.</p></div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

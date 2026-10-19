@@ -45,6 +45,6 @@ jobs:
           python-version: "3.13"
       - run: pip install bandit==1.9.4 pip-audit==2.10.1
       - name: Static analysis (bandit)
-        run: bandit -c pyproject.toml -r grc_dashboard grc_project
+        run: bandit -c pyproject.toml -r grc_dashboard grc_project ato
       - name: Dependency audit (pip-audit)
         run: pip-audit -r requirements.txt

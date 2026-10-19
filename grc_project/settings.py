@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "grc_dashboard",
+    "ato",
 ]
 
 MIDDLEWARE = [

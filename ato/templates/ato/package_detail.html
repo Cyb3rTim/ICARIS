@@ -1,0 +1,78 @@
+{% extends 'grc_dashboard/base.html' %}
+
+{% block title %}{{ package.name }} - ICARIS{% endblock %}
+{% block nav_systems %}active{% endblock %}
+{% block extra_css %}{% include 'ato/_styles.html' %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <p class="subtitle" style="margin-bottom:4px;"><a href="{% url 'ato:system_detail' package.system.pk %}">&larr; {{ package.system.acronym }}</a></p>
+        <h1>{{ package.name }}</h1>
+        <div class="meta-row" style="margin-top:8px;">
+            <span class="pill">{{ package.get_status_display }}</span>
+            {% if package.decision %}<span class="pill">{{ package.get_decision_display }}</span>{% include 'ato/_expiry_pill.html' with pkg=package %}{% endif %}
+        </div>
+    </div>
+    {% if perms.ato.change_authorizationpackage %}
+    <a href="{% url 'ato:package_update' package.pk %}" class="btn-primary-custom"><i class="fas fa-gavel"></i>Update status / decision</a>
+    {% endif %}
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-file-shield"></i></div>
+        <div class="stat-value">{{ readiness.complete }}/{{ readiness.required }}</div>
+        <div class="stat-label">Required documents final</div>
+        <div class="progress" style="margin-top:8px;"><span style="width: {{ readiness.percent }}%"></span></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-circle-check"></i></div>
+        <div class="stat-value">{{ summary.percent_implemented }}%</div>
+        <div class="stat-label">Controls implemented</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-triangle-exclamation"></i></div>
+        <div class="stat-value">{{ summary.other_than_satisfied }}</div>
+        <div class="stat-label">Controls other than satisfied</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon orange"><i class="fas fa-tasks"></i></div>
+        <div class="stat-value">{{ open_poams }}</div>
+        <div class="stat-label">Open POA&amp;Ms</div>
+    </div>
+</div>
+
+<div class="split">
+    <div class="table-card">
+        <div class="table-header"><div><div class="table-title">Package documents</div></div></div>
+        <table class="custom-table">
+            <thead><tr><th>Document</th><th>Status</th><th>Linked artifact</th><th></th></tr></thead>
+            <tbody>
+            {% for doc in documents %}
+                <tr>
+                    <td><strong>{{ doc.get_doc_type_display }}</strong>{% if not doc.required %} <span class="pill none">optional</span>{% endif %}{% if doc.notes %}<div style="font-size:12px; color:#86868b;">{{ doc.notes }}</div>{% endif %}</td>
+                    <td><span class="status-badge {% if doc.status == 'approved' or doc.status == 'final' %}compliant{% elif doc.status == 'missing' %}critical{% else %}in_progress{% endif %}">{{ doc.get_status_display }}</span></td>
+                    <td>{% if doc.artifact %}<a href="{% url 'artifact_download' doc.artifact.pk %}">{{ doc.artifact.title }}</a>{% else %}<span style="color:#86868b;">—</span>{% endif %}</td>
+                    <td>{% if perms.ato.change_packagedocument %}<a class="btn-action" href="{% url 'ato:document_update' doc.pk %}" title="Update document"><i class="fas fa-edit"></i></a>{% endif %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="panel">
+        <h2>Decision</h2>
+        <dl class="kv">
+            <dt>Target decision</dt><dd>{{ package.target_decision_date|default:"—" }}</dd>
+            <dt>Decision</dt><dd>{{ package.get_decision_display|default:"Pending" }}</dd>
+            <dt>Decision date</dt><dd>{{ package.decision_date|default:"—" }}</dd>
+            <dt>Termination</dt><dd>{% if package.ongoing_authorization %}Ongoing authorization{% else %}{{ package.expiration_date|default:"—" }}{% endif %}</dd>
+            <dt>Authorizing official</dt><dd>{{ package.system.authorizing_official|default:"—" }}</dd>
+        </dl>
+        {% if package.conditions %}
+        <h2 style="margin-top:18px;">Conditions</h2>
+        <p style="white-space:pre-wrap; font-size:14px; margin:0;">{{ package.conditions }}</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends 'grc_dashboard/base.html' %}
+
+{% block title %}{{ system.acronym }} - ICARIS{% endblock %}
+{% block nav_systems %}active{% endblock %}
+{% block extra_css %}{% include 'ato/_styles.html' %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <p class="subtitle" style="margin-bottom:4px;"><a href="{% url 'ato:system_list' %}">&larr; Systems</a></p>
+        <h1>{{ system.acronym }} &middot; {{ system.name }}</h1>
+        <div class="meta-row" style="margin-top:8px;">
+            <span class="pill {{ system.categorization }}">{{ system.get_categorization_display }} impact</span>
+            <span class="pill">C: {{ system.get_confidentiality_display }} &middot; I: {{ system.get_integrity_display }} &middot; A: {{ system.get_availability_display }}</span>
+            <span class="pill">RMF: {{ system.get_rmf_step_display }}</span>
+            {% include 'ato/_auth_pill.html' with auth=auth %}
+        </div>
+    </div>
+    <div class="inline-actions">
+        {% if perms.ato.change_informationsystem %}
+        <a href="{% url 'ato:system_update' system.pk %}" class="btn-secondary-custom"><i class="fas fa-pen"></i>Edit</a>
+        {% endif %}
+        {% if perms.ato.add_authorizationpackage %}
+        <a href="{% url 'ato:package_create' system.pk %}" class="btn-primary-custom"><i class="fas fa-folder-plus"></i>New Package</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-list-check"></i></div>
+        <div class="stat-value">{{ summary.total }}</div>
+        <div class="stat-label">Controls tracked</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-circle-check"></i></div>
+        <div class="stat-value">{{ summary.percent_implemented }}%</div>
+        <div class="stat-label">Implemented ({{ summary.implemented }})</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon orange"><i class="fas fa-spinner"></i></div>
+        <div class="stat-value">{{ summary.partial|add:summary.planned|add:summary.not_started }}</div>
+        <div class="stat-label">Partial / planned / not started</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-triangle-exclamation"></i></div>
+        <div class="stat-value">{{ summary.other_than_satisfied }}</div>
+        <div class="stat-label">Assessed other than satisfied</div>
+    </div>
+</div>
+
+{% if summary.total < baseline_size and perms.ato.add_controlimplementation %}
+<div class="callout" style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
+    <span>
+        {% if summary.total == 0 %}No controls are tracked yet. {% else %}{{ baseline_size|add:"0" }} controls are in the {{ system.get_categorization_display }} baseline; {{ summary.total }} are tracked. {% endif %}
+        Apply the NIST SP 800-53B {{ system.get_categorization_display }} baseline to add the missing controls. Existing entries are left as they are.
+    </span>
+    <form method="post" action="{% url 'ato:system_apply_baseline' system.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn-primary-custom"><i class="fas fa-wand-magic-sparkles"></i>Apply {{ system.get_categorization_display }} baseline</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="split">
+    <div>
+        <div class="table-card">
+            <div class="table-header">
+                <div>
+                    <div class="table-title">Control implementations</div>
+                    <div class="table-subtitle">{{ page.paginator.count }} shown</div>
+                </div>
+            </div>
+            <form method="get" class="row g-2" style="padding: 0 4px 12px;">
+                <div class="col-md-4">
+                    <input type="search" name="q" value="{{ query }}" class="form-control" placeholder="Search label or title">
+                </div>
+                <div class="col-md-3">
+                    <select name="family" class="form-select">
+                        <option value="">All families</option>
+                        {% for fam in families %}<option value="{{ fam.code }}" {% if family_filter == fam.code %}selected{% endif %}>{{ fam.code }} - {{ fam.title }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select">
+                        <option value="">All statuses</option>
+                        {% for value, label in statuses %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button class="btn-filter flex-grow-1" type="submit"><i class="fas fa-filter"></i></button>
+                    <a class="btn-clear" href="{% url 'ato:system_detail' system.pk %}"><i class="fas fa-times"></i></a>
+                </div>
+            </form>
+            <table class="custom-table">
+                <thead><tr><th>Control</th><th>Title</th><th>Status</th><th>Origination</th><th>Assessment</th><th></th></tr></thead>
+                <tbody>
+                {% for impl in page %}
+                    <tr>
+                        <td><a href="{% url 'ato:control_detail' impl.control.control_id %}"><strong>{{ impl.control.label }}</strong></a></td>
+                        <td>{{ impl.control.title }}</td>
+                        <td><span class="status-badge {% if impl.status == 'implemented' %}compliant{% elif impl.status == 'not_applicable' %}closed{% elif impl.status == 'not_started' %}critical{% else %}in_progress{% endif %}">{{ impl.get_status_display }}</span></td>
+                        <td>{{ impl.get_origination_display }}</td>
+                        <td>{% if impl.assessment_result == 'satisfied' %}<span class="pill ok">Satisfied</span>{% elif impl.assessment_result == 'other_than_satisfied' %}<span class="pill critical">Other than satisfied</span>{% else %}<span class="pill none">Not assessed</span>{% endif %}</td>
+                        <td>{% if perms.ato.change_controlimplementation %}<a class="btn-action" href="{% url 'ato:implementation_update' impl.pk %}" title="Edit implementation"><i class="fas fa-edit"></i></a>{% endif %}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6"><div class="empty-state"><i class="fas fa-list-check"></i><p>No control implementations match.</p></div></td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% include 'ato/_pagination.html' %}
+        </div>
+    </div>
+
+    <div>
+        <div class="panel">
+            <h2>System profile</h2>
+            <dl class="kv">
+                <dt>Environment</dt><dd>{{ system.get_environment_display }}</dd>
+                <dt>System owner</dt><dd>{% if system.system_owner %}{{ system.system_owner.get_full_name|default:system.system_owner.username }}{% else %}—{% endif %}</dd>
+                <dt>ISSO</dt><dd>{% if system.isso %}{{ system.isso.get_full_name|default:system.isso.username }}{% else %}—{% endif %}</dd>
+                <dt>Authorizing official</dt><dd>{{ system.authorizing_official|default:"—" }}</dd>
+            </dl>
+            {% if system.description %}<p style="margin:14px 0 0; font-size:14px; color:#3a3a3c;">{{ system.description }}</p>{% endif %}
+        </div>
+
+        <div class="panel">
+            <h2>Authorization packages</h2>
+            {% for pkg in packages %}
+                <div style="padding:10px 0; border-bottom:1px solid #f0f0f2;">
+                    <a href="{% url 'ato:package_detail' pkg.pk %}"><strong>{{ pkg.name }}</strong></a>
+                    <div class="meta-row" style="margin-top:4px;">
+                        <span class="pill">{{ pkg.get_status_display }}</span>
+                        {% if pkg.decision %}<span class="pill">{{ pkg.get_decision_display }}</span>{% include 'ato/_expiry_pill.html' with pkg=pkg %}{% endif %}
+                    </div>
+                </div>
+            {% empty %}
+                <p style="color:#86868b; font-size:14px; margin:0;">No packages yet.</p>
+            {% endfor %}
+        </div>
+
+        <div class="panel">
+            <h2>Coverage by family</h2>
+            {% for row in coverage %}
+                <div class="family-row" title="{{ row.control__family__title }}">
+                    <a href="?family={{ row.control__family__code }}">{{ row.control__family__code }}</a>
+                    <div class="progress green"><span style="width: {{ row.percent }}%"></span></div>
+                    <span style="text-align:right;">{{ row.percent }}%</span>
+                </div>
+            {% empty %}
+                <p style="color:#86868b; font-size:14px; margin:0;">Apply a baseline to see coverage.</p>
+            {% endfor %}
+        </div>
+
+        <div class="panel">
+            <h2>Open POA&amp;Ms</h2>
+            {% for poam in poams %}
+                <div style="padding:8px 0; border-bottom:1px solid #f0f0f2; font-size:14px;">
+                    <span class="priority-badge {{ poam.priority }}">{{ poam.get_priority_display }}</span>
+                    {{ poam.title }}{% if poam.control %} <span style="color:#86868b;">({{ poam.control.label }})</span>{% endif %}
+                </div>
+            {% empty %}
+                <p style="color:#86868b; font-size:14px; margin:0;">No open POA&amp;Ms linked to this system.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

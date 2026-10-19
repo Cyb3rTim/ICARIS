@@ -221,6 +221,26 @@ class Issue(models.Model):
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_issues')
     related_risk = models.ForeignKey(Risk, on_delete=models.SET_NULL, null=True, blank=True, related_name='issues')
     related_audit = models.ForeignKey(Audit, on_delete=models.SET_NULL, null=True, blank=True, related_name='issues')
+    system = models.ForeignKey(
+        'ato.InformationSystem', on_delete=models.SET_NULL, null=True, blank=True, related_name='poams',
+        help_text="Information system the weakness belongs to",
+    )
+    control = models.ForeignKey(
+        'ato.SecurityControl', on_delete=models.SET_NULL, null=True, blank=True, related_name='poams',
+        help_text="NIST SP 800-53 control the weakness relates to",
+    )
+    source = models.CharField(
+        max_length=20,
+        choices=[
+            ('assessment', 'Security assessment'),
+            ('scan', 'Vulnerability scan'),
+            ('conmon', 'Continuous monitoring'),
+            ('audit', 'Audit'),
+            ('other', 'Other'),
+        ],
+        default='assessment',
+        help_text="How the weakness was identified",
+    )
     due_date = models.DateField(null=True, blank=True)
     resolution_notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

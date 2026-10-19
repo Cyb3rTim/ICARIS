@@ -761,6 +761,13 @@
             }
         }
 
+        .flash-stack { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+        .flash { padding: 12px 16px; border-radius: 10px; font-size: 14px; border: 1px solid transparent; }
+        .flash-success { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+        .flash-info { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+        .flash-warning { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+        .flash-error { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+
         {% block extra_css %}{% endblock %}
     </style>
 </head>
@@ -779,6 +786,12 @@
                 <a href="{% url 'dashboard' %}" class="nav-link {% block nav_dashboard %}{% endblock %}">
                     <i class="fas fa-th-large"></i>
                     <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'ato:system_list' %}" class="nav-link {% block nav_systems %}{% endblock %}">
+                    <i class="fas fa-server"></i>
+                    <span>Systems &amp; ATO</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -803,6 +816,12 @@
                 <a href="{% url 'compliance_tracking' %}" class="nav-link {% block nav_controls %}{% endblock %}">
                     <i class="fas fa-shield-alt"></i>
                     <span>Controls</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'ato:control_list' %}" class="nav-link {% block nav_catalog %}{% endblock %}">
+                    <i class="fas fa-book"></i>
+                    <span>800-53 Catalog</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -833,6 +852,15 @@
 
     <!-- Main Content -->
     <main class="main-content">
+        {% block messages %}
+        {% if messages %}
+        <div class="flash-stack" role="status">
+            {% for message in messages %}
+            <div class="flash flash-{{ message.tags|default:'info' }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endblock %}
         {% block content %}
         {% endblock %}
     </main>

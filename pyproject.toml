@@ -10,7 +10,7 @@ python_files = ["test_*.py"]
 addopts = "-q --strict-markers"
 
 [tool.coverage.run]
-source = ["grc_dashboard", "grc_project"]
+source = ["grc_dashboard", "grc_project", "ato"]
 omit = ["*/migrations/*", "*/tests/*", "grc_project/asgi.py", "grc_project/wsgi.py"]
 
 [tool.ruff]
@@ -31,4 +31,4 @@ ignore = [
 "create_sample_data.py" = ["E402", "S105", "S106", "S311"]  # django.setup() must run before model imports
 
 [tool.bandit]
-exclude_dirs = ["grc_dashboard/tests", "grc_dashboard/migrations"]
+exclude_dirs = ["grc_dashboard/tests", "grc_dashboard/migrations", "ato/tests", "ato/migrations"]

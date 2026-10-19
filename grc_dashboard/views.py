@@ -3,7 +3,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth import logout
 from django.http import FileResponse, Http404, JsonResponse
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 from django.db.models import Count, Q, Avg
 from django.utils import timezone
 from django.contrib import messages
@@ -473,23 +473,13 @@ def user_guide(request):
     return render(request, 'grc_dashboard/user_guide.html', context)
 
 
-# ============================================================
-# LOGOUT VIEW - Added for user logout functionality
-# ============================================================
-
+@require_POST
 def user_logout(request):
+    """Log out (POST only, CSRF-protected) and return to the login page.
+
+    Accepting GET would let any page log a user out with an <img> tag.
     """
-    Log out the current user and redirect to login page
-    """
-    # Get username before logging out for personalized message
     username = request.user.username if request.user.is_authenticated else "User"
-    
-    # Logout the user (clears session)
     logout(request)
-    
-    # Add success message
     messages.success(request, f"Goodbye {username}! You have been successfully logged out.")
-    
-    # Redirect to login page
-    # ⚠️ IMPORTANT: Change 'login' to match your actual login URL name
     return redirect('login')

@@ -534,12 +534,16 @@
                     <td>{{ risk.owner.username|default:"Unassigned" }}</td>
                     <td>
                         <div class="action-buttons">
+                            {% if perms.grc_dashboard.change_risk %}
                             <a href="{% url 'risk_update' risk.pk %}" class="btn-icon" title="Edit Requirement">
                                 <i class="fas fa-edit"></i>
                             </a>
+                            {% endif %}
+                            {% if perms.grc_dashboard.delete_risk %}
                             <a href="{% url 'risk_delete' risk.pk %}" class="btn-icon btn-icon-danger" title="Delete Requirement">
                                 <i class="fas fa-trash"></i>
                             </a>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>

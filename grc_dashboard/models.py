@@ -276,14 +276,10 @@ class UserProfile(models.Model):
         return f"{self.user.username} - {self.department if self.department else 'No Department'}"
     
     def can_manage_poams(self):
-        """Check if user can create/edit/delete PO&AMs"""
-        # Admin users can always manage PO&AMs
-        if self.user.is_superuser or self.user.is_staff:
-            return True
-        # Security department users can manage PO&AMs
-        if self.department and self.department.name == 'Security':
-            return True
-        return False
+        """True if the user may create, edit and delete PO&AMs (see roles.py)."""
+        return self.user.has_perms(
+            ["grc_dashboard.add_issue", "grc_dashboard.change_issue", "grc_dashboard.delete_issue"]
+        )
 
 
 # Auto-create profile when user is created

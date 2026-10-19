@@ -1,0 +1,16 @@
+{% extends 'grc_dashboard/base.html' %}
+
+{% block title %}Access denied - ICARIS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Access denied</h1>
+        <p class="subtitle">Your role does not include permission for this action.</p>
+    </div>
+</div>
+<div class="filter-card" style="max-width: 640px;">
+    <p>If you need this access, ask an administrator to add you to the appropriate role (ISSO or Analyst).</p>
+    <a href="{% url 'dashboard' %}" class="btn-primary-custom"><i class="fas fa-arrow-left"></i> Back to dashboard</a>
+</div>
+{% endblock %}

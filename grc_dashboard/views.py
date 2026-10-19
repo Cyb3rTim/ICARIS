@@ -1,6 +1,6 @@
 # grc_dashboard/views.py
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth import logout
 from django.http import JsonResponse, HttpResponse
 from django.db.models import Count, Q, Avg
@@ -10,6 +10,7 @@ from datetime import timedelta
 
 from .models import Risk, ComplianceControl, Audit, Issue, Department, Artifact
 from .forms import RiskForm, ComplianceControlForm, AuditForm, IssueForm
+from . import audit_log
 
 @login_required
 def dashboard(request):
@@ -199,6 +200,7 @@ def issue_tracking(request):
 
 
 @login_required
+@permission_required('grc_dashboard.add_risk', raise_exception=True)
 def risk_create(request):
     """Create a new ConMon requirement"""
     if request.method == 'POST':
@@ -212,6 +214,7 @@ def risk_create(request):
                 risk.last_evidence_update = timezone.now()
             
             risk.save()
+            audit_log.record(request, 'create', risk)
             messages.success(request, 'ConMon requirement created successfully!')
             return redirect('risk_register')
     else:
@@ -224,6 +227,7 @@ def risk_create(request):
 
 
 @login_required
+@permission_required('grc_dashboard.change_risk', raise_exception=True)
 def risk_update(request, pk):
     """Update/Edit a ConMon requirement"""
     risk = get_object_or_404(Risk, pk=pk)
@@ -232,6 +236,7 @@ def risk_update(request, pk):
         form = RiskForm(request.POST, instance=risk)
         if form.is_valid():
             form.save()
+            audit_log.record(request, 'update', risk)
             return redirect('risk_register')
     else:
         form = RiskForm(instance=risk)
@@ -240,11 +245,13 @@ def risk_update(request, pk):
 
 
 @login_required
+@permission_required('grc_dashboard.delete_risk', raise_exception=True)
 def risk_delete(request, pk):
     """Delete a ConMon requirement"""
     risk = get_object_or_404(Risk, pk=pk)
     
     if request.method == 'POST':
+        audit_log.record(request, 'delete', risk)
         risk.delete()
         return redirect('risk_register')
     
@@ -292,6 +299,7 @@ def artifacts(request):
 
 
 @login_required
+@permission_required('grc_dashboard.add_issue', raise_exception=True)
 def issue_create(request):
     if request.method == 'POST':
         form = IssueForm(request.POST)
@@ -300,6 +308,7 @@ def issue_create(request):
             if not issue.assigned_to:
                 issue.assigned_to = request.user
             issue.save()
+            audit_log.record(request, 'create', issue)
             return redirect('issue_tracking')
     else:
         form = IssueForm()
@@ -308,6 +317,7 @@ def issue_create(request):
 
 
 @login_required
+@permission_required('grc_dashboard.change_issue', raise_exception=True)
 def issue_update(request, pk):
     issue = get_object_or_404(Issue, pk=pk)
     
@@ -315,6 +325,7 @@ def issue_update(request, pk):
         form = IssueForm(request.POST, instance=issue)
         if form.is_valid():
             form.save()
+            audit_log.record(request, 'update', issue)
             return redirect('issue_tracking')
     else:
         form = IssueForm(instance=issue)
@@ -323,10 +334,12 @@ def issue_update(request, pk):
 
 
 @login_required
+@permission_required('grc_dashboard.delete_issue', raise_exception=True)
 def issue_delete(request, pk):
     issue = get_object_or_404(Issue, pk=pk)
     
     if request.method == 'POST':
+        audit_log.record(request, 'delete', issue)
         issue.delete()
         return redirect('issue_tracking')
     
@@ -334,6 +347,7 @@ def issue_delete(request, pk):
 
 
 @login_required
+@permission_required('grc_dashboard.add_artifact', raise_exception=True)
 def artifact_create(request):
     """Upload a new artifact"""
     from .forms import ArtifactForm
@@ -344,7 +358,8 @@ def artifact_create(request):
             artifact = form.save(commit=False)
             artifact.uploaded_by = request.user
             artifact.save()
-            
+            audit_log.record(request, 'create', artifact)
+
             messages.success(
                 request, 
                 f'✅ {artifact.get_category_display()} uploaded successfully!'
@@ -361,10 +376,12 @@ def artifact_create(request):
 
 
 @login_required
+@permission_required('grc_dashboard.delete_artifact', raise_exception=True)
 def artifact_delete(request, pk):
     artifact = get_object_or_404(Artifact, pk=pk)
     
     if request.method == 'POST':
+        audit_log.record(request, 'delete', artifact)
         artifact.file.delete()
         artifact.delete()
         return redirect('artifacts')

@@ -1,6 +1,7 @@
 # grc_dashboard/forms.py
 from django import forms
-from .models import Risk, ComplianceControl, Audit, Issue, Artifact
+
+from .models import Artifact, Audit, ComplianceControl, Issue, Risk
 from .validators import ALLOWED_EXTENSIONS
 
 ACCEPT_ATTR = ",".join(f".{ext}" for ext in ALLOWED_EXTENSIONS)

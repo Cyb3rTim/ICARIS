@@ -1,33 +1,35 @@
 # grc_dashboard/views.py
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required, permission_required
-from django.contrib.auth import logout
-from django.http import FileResponse, Http404, JsonResponse
-from django.views.decorators.http import require_GET, require_POST
-from django.db.models import Count, Q, Avg
-from django.utils import timezone
-from django.contrib import messages
 from datetime import timedelta
 
-from .models import Risk, ComplianceControl, Audit, Issue, Department, Artifact
-from .forms import RiskForm, ComplianceControlForm, AuditForm, IssueForm
+from django.contrib import messages
+from django.contrib.auth import logout
+from django.contrib.auth.decorators import login_required, permission_required
+from django.db.models import Avg, Count
+from django.http import FileResponse, Http404, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_GET, require_POST
+
 from . import audit_log
+from .forms import IssueForm, RiskForm
+from .models import Artifact, Audit, ComplianceControl, Department, Issue, Risk
+
 
 @login_required
 def dashboard(request):
     """Main GRC dashboard with key metrics and visualizations"""
-    
+
     # Risk metrics
     total_risks = Risk.objects.count()
     critical_risks = Risk.objects.filter(severity='critical', status__in=['open', 'in_progress']).count()
     open_risks = Risk.objects.filter(status='open').count()
-    
+
     # Compliance metrics
     total_controls = ComplianceControl.objects.count()
     compliant_controls = ComplianceControl.objects.filter(status='compliant').count()
     non_compliant_controls = ComplianceControl.objects.filter(status='non_compliant').count()
     compliance_rate = (compliant_controls / total_controls * 100) if total_controls > 0 else 0
-    
+
     # Audit metrics
     total_audits = Audit.objects.count()
     upcoming_audits = Audit.objects.filter(
@@ -35,7 +37,7 @@ def dashboard(request):
         start_date__lte=timezone.now().date() + timedelta(days=30)
     ).count()
     in_progress_audits = Audit.objects.filter(status='in_progress').count()
-    
+
     # Issue metrics
     total_issues = Issue.objects.count()
     open_issues = Issue.objects.filter(status__in=['open', 'in_progress']).count()
@@ -43,18 +45,18 @@ def dashboard(request):
         status__in=['open', 'in_progress'],
         due_date__lt=timezone.now().date()
     ).count()
-    
+
     # Risk by severity
     risks_by_severity = Risk.objects.values('severity').annotate(count=Count('id'))
-    
+
     # Compliance by status
     compliance_by_status = ComplianceControl.objects.values('status').annotate(count=Count('id'))
-    
+
     # Recent activities
     recent_risks = Risk.objects.select_related('department', 'owner').order_by('-created_at')[:5]
     recent_audits = Audit.objects.select_related('department', 'auditor').order_by('-created_at')[:5]
     recent_issues = Issue.objects.select_related('department', 'assigned_to').order_by('-created_at')[:5]
-    
+
     context = {
         'total_risks': total_risks,
         'critical_risks': critical_risks,
@@ -74,7 +76,7 @@ def dashboard(request):
         'recent_audits': recent_audits,
         'recent_issues': recent_issues,
     }
-    
+
     return render(request, 'grc_dashboard/dashboard.html', context)
 
 
@@ -131,7 +133,7 @@ def risk_register(request):
 def risk_heatmap_data(request):
     """API endpoint for risk heatmap data"""
     risks = Risk.objects.all()
-    
+
     data = []
     for risk in risks:
         data.append({
@@ -142,7 +144,7 @@ def risk_heatmap_data(request):
             'severity': risk.severity,
             'department': risk.department.name,
         })
-    
+
     return JsonResponse({'risks': data})
 
 
@@ -150,26 +152,26 @@ def risk_heatmap_data(request):
 def compliance_tracking(request):
     """Compliance tracking view"""
     controls = ComplianceControl.objects.select_related('framework', 'department', 'owner').all()
-    
+
     # Apply filters
     framework_filter = request.GET.get('framework')
     status_filter = request.GET.get('status')
-    
+
     if framework_filter:
         controls = controls.filter(framework_id=framework_filter)
     if status_filter:
         controls = controls.filter(status=status_filter)
-    
+
     from .models import ComplianceFramework
     frameworks = ComplianceFramework.objects.all()
-    
+
     context = {
         'controls': controls,
         'frameworks': frameworks,
         'framework_filter': framework_filter,
         'status_filter': status_filter,
     }
-    
+
     return render(request, 'grc_dashboard/compliance_tracking.html', context)
 
 
@@ -177,22 +179,22 @@ def compliance_tracking(request):
 def audit_management(request):
     """Audit management view"""
     audits = Audit.objects.select_related('department', 'auditor').all()
-    
+
     # Apply filters
     type_filter = request.GET.get('type')
     status_filter = request.GET.get('status')
-    
+
     if type_filter:
         audits = audits.filter(audit_type=type_filter)
     if status_filter:
         audits = audits.filter(status=status_filter)
-    
+
     context = {
         'audits': audits,
         'type_filter': type_filter,
         'status_filter': status_filter,
     }
-    
+
     return render(request, 'grc_dashboard/audit_management.html', context)
 
 
@@ -241,19 +243,19 @@ def risk_create(request):
         form = RiskForm(request.POST, request.FILES)
         if form.is_valid():
             risk = form.save(commit=False)
-            
+
             # If evidence file is uploaded, mark as uploaded
             if 'evidence_file' in request.FILES:
                 risk.evidence_uploaded = True
                 risk.last_evidence_update = timezone.now()
-            
+
             risk.save()
             audit_log.record(request, 'create', risk)
             messages.success(request, 'ConMon requirement created successfully!')
             return redirect('risk_register')
     else:
         form = RiskForm()
-    
+
     return render(request, 'grc_dashboard/risk_form.html', {
         'form': form,
         'action': 'Create'
@@ -265,7 +267,7 @@ def risk_create(request):
 def risk_update(request, pk):
     """Update/Edit a ConMon requirement"""
     risk = get_object_or_404(Risk, pk=pk)
-    
+
     if request.method == 'POST':
         form = RiskForm(request.POST, request.FILES, instance=risk)
         if form.is_valid():
@@ -288,34 +290,34 @@ def risk_update(request, pk):
 def risk_delete(request, pk):
     """Delete a ConMon requirement"""
     risk = get_object_or_404(Risk, pk=pk)
-    
+
     if request.method == 'POST':
         audit_log.record(request, 'delete', risk)
         risk.delete()
         return redirect('risk_register')
-    
+
     return render(request, 'grc_dashboard/risk_confirm_delete.html', {'risk': risk})
 
 
 @login_required
 def artifacts(request):
     """Artifacts document management view with filtering and statistics"""
-    
+
     # Get all artifacts
     artifacts_list = Artifact.objects.select_related('department', 'uploaded_by').all()
-    
+
     # Apply filters
     category_filter = request.GET.get('category')
     department_filter = request.GET.get('department')
-    
+
     if category_filter:
         artifacts_list = artifacts_list.filter(category=category_filter)
     if department_filter:
         artifacts_list = artifacts_list.filter(department_id=department_filter)
-    
+
     # Get all departments for filter dropdown
     departments = Department.objects.all()
-    
+
     # Calculate statistics by category
     all_artifacts = Artifact.objects.all()
     stats = {
@@ -325,7 +327,7 @@ def artifacts(request):
         'evidence': all_artifacts.filter(category='evidence').count(),
         'documents': all_artifacts.filter(category__in=['policy', 'procedure']).count(),
     }
-    
+
     context = {
         'artifacts': artifacts_list,
         'departments': departments,
@@ -333,7 +335,7 @@ def artifacts(request):
         'category_filter': category_filter,
         'department_filter': department_filter,
     }
-    
+
     return render(request, 'grc_dashboard/artifacts.html', context)
 
 
@@ -352,7 +354,7 @@ def issue_create(request):
             return redirect('issue_tracking')
     else:
         form = IssueForm()
-    
+
     return render(request, 'grc_dashboard/issue_form.html', {'form': form, 'action': 'Create'})
 
 
@@ -360,7 +362,7 @@ def issue_create(request):
 @permission_required('grc_dashboard.change_issue', raise_exception=True)
 def issue_update(request, pk):
     issue = get_object_or_404(Issue, pk=pk)
-    
+
     if request.method == 'POST':
         form = IssueForm(request.POST, instance=issue)
         if form.is_valid():
@@ -370,7 +372,7 @@ def issue_update(request, pk):
             return redirect('issue_tracking')
     else:
         form = IssueForm(instance=issue)
-    
+
     return render(request, 'grc_dashboard/issue_form.html', {'form': form, 'action': 'Update', 'issue': issue})
 
 
@@ -378,12 +380,12 @@ def issue_update(request, pk):
 @permission_required('grc_dashboard.delete_issue', raise_exception=True)
 def issue_delete(request, pk):
     issue = get_object_or_404(Issue, pk=pk)
-    
+
     if request.method == 'POST':
         audit_log.record(request, 'delete', issue)
         issue.delete()
         return redirect('issue_tracking')
-    
+
     return render(request, 'grc_dashboard/issue_confirm_delete.html', {'issue': issue})
 
 
@@ -392,7 +394,7 @@ def issue_delete(request, pk):
 def artifact_create(request):
     """Upload a new artifact"""
     from .forms import ArtifactForm
-    
+
     if request.method == 'POST':
         form = ArtifactForm(request.POST, request.FILES)
         if form.is_valid():
@@ -403,16 +405,16 @@ def artifact_create(request):
             audit_log.record(request, 'create', artifact)
 
             messages.success(
-                request, 
+                request,
                 f'✅ {artifact.get_category_display()} uploaded successfully!'
             )
-            
+
             return redirect('artifacts')
     else:
         form = ArtifactForm()
-    
+
     return render(request, 'grc_dashboard/artifact_form.html', {
-        'form': form, 
+        'form': form,
         'action': 'Upload'
     })
 
@@ -421,13 +423,13 @@ def artifact_create(request):
 @permission_required('grc_dashboard.delete_artifact', raise_exception=True)
 def artifact_delete(request, pk):
     artifact = get_object_or_404(Artifact, pk=pk)
-    
+
     if request.method == 'POST':
         audit_log.record(request, 'delete', artifact)
         artifact.file.delete()
         artifact.delete()
         return redirect('artifacts')
-    
+
     return render(request, 'grc_dashboard/artifact_confirm_delete.html', {'artifact': artifact})
 
 

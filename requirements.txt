@@ -1,2 +1,5 @@
 # Runtime dependencies (pinned). Django 5.2 is the current LTS line (supported to April 2028).
 Django==5.2.18
+gunicorn==26.2.0
+whitenoise==6.12.0
+psycopg[binary]==3.3.6

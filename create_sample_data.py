@@ -1,12 +1,15 @@
 import os
+
 import django
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'grc_project.settings')
 django.setup()
 
-from django.contrib.auth.models import User
-from grc_dashboard.models import Department, Risk, ComplianceFramework, ComplianceControl, Audit, Issue
 from datetime import date, timedelta
+
+from django.contrib.auth.models import User
+
+from grc_dashboard.models import Audit, ComplianceControl, ComplianceFramework, Department, Issue, Risk
 
 print("Creating sample data...")
 

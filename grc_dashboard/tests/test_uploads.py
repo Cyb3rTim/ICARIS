@@ -105,6 +105,7 @@ class ArtifactUploadFlowTests(TestCase):
         self.assertIn("Our SSP v3.pdf", response["Content-Disposition"])
         self.assertEqual(response["X-Content-Type-Options"], "nosniff")
         self.assertEqual(b"".join(response.streaming_content), PDF)
+        response.close()
 
     def test_inline_view_only_for_safe_types(self):
         self.post_upload(upload("Our SSP v3.pdf", PDF))

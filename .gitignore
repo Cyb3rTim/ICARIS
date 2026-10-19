@@ -14,7 +14,7 @@ ENV/
 
 # Django
 *.log
-db.sqlite3
+*.sqlite3
 db.sqlite3-journal
 /media
 /staticfiles
@@ -36,3 +36,11 @@ Thumbs.db
 
 # Secret key
 secret_key.txt
+# Test and coverage output
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/

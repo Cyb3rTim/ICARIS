@@ -1,6 +1,8 @@
 # grc_dashboard/admin.py
 from django.contrib import admin
-from .models import Department, Risk, ComplianceFramework, ComplianceControl, Audit, Issue
+
+from .models import Audit, ComplianceControl, ComplianceFramework, Department, Issue, Risk
+
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
@@ -15,7 +17,7 @@ class RiskAdmin(admin.ModelAdmin):
     search_fields = ['title', 'description']
     date_hierarchy = 'created_at'
     readonly_fields = ['risk_score', 'created_at', 'updated_at']
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('title', 'description', 'department', 'owner')
@@ -45,7 +47,7 @@ class ComplianceControlAdmin(admin.ModelAdmin):
     list_filter = ['status', 'framework', 'department', 'last_assessment_date']
     search_fields = ['control_id', 'title', 'description']
     date_hierarchy = 'last_assessment_date'
-    
+
     fieldsets = (
         ('Control Information', {
             'fields': ('framework', 'control_id', 'title', 'description')
@@ -69,7 +71,7 @@ class AuditAdmin(admin.ModelAdmin):
     list_filter = ['audit_type', 'status', 'department', 'start_date']
     search_fields = ['title', 'scope', 'findings']
     date_hierarchy = 'start_date'
-    
+
     fieldsets = (
         ('Audit Information', {
             'fields': ('title', 'audit_type', 'department', 'auditor', 'status')
@@ -93,7 +95,7 @@ class IssueAdmin(admin.ModelAdmin):
     list_filter = ['priority', 'status', 'department', 'due_date', 'created_at']
     search_fields = ['title', 'description']
     date_hierarchy = 'created_at'
-    
+
     fieldsets = (
         ('Issue Information', {
             'fields': ('title', 'description', 'priority', 'status')

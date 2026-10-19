@@ -1,0 +1,34 @@
+# Local stack: ICARIS + PostgreSQL. Copy .env.example to .env first.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: icaris
+      POSTGRES_USER: icaris
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U icaris -d icaris"]
+      interval: 5s
+      retries: 10
+
+  web:
+    build: .
+    env_file: .env
+    environment:
+      POSTGRES_DB: icaris
+      POSTGRES_USER: icaris
+      POSTGRES_HOST: db
+      DJANGO_SECURE_SSL_REDIRECT: "false"  # local only; terminate TLS at a proxy in production
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - media:/var/lib/icaris/media
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  media:

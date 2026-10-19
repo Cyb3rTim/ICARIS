@@ -1,10 +1,10 @@
 # grc_dashboard/models.py
-from django.db import models
 from django.contrib.auth.models import User
-from django.core.validators import MinValueValidator, MaxValueValidator
-from django.utils import timezone
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 from .validators import RandomizedUploadPath, validate_evidence_file
 
@@ -28,7 +28,7 @@ class Risk(models.Model):
         ('medium', 'Medium'),
         ('low', 'Low'),
     ]
-    
+
     STATUS_CHOICES = [
         ('open', 'Open'),
         ('in_progress', 'In Progress'),
@@ -56,7 +56,7 @@ class Risk(models.Model):
     target_closure_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     # Compliance tracking fields
     compliance_percentage = models.IntegerField(
         default=0,
@@ -64,13 +64,13 @@ class Risk(models.Model):
         help_text="Compliance percentage (0-100%)",
         verbose_name="Compliance %"
     )
-    
+
     evidence_uploaded = models.BooleanField(
         default=False,
         help_text="Has compliance evidence been uploaded?",
         verbose_name="Evidence Uploaded"
     )
-    
+
     evidence_file = models.FileField(
         upload_to=RandomizedUploadPath('compliance_evidence'),
         validators=[validate_evidence_file],
@@ -79,7 +79,7 @@ class Risk(models.Model):
         help_text="Compliance evidence file",
         verbose_name="Evidence File"
     )
-    
+
     last_evidence_update = models.DateTimeField(
         null=True,
         blank=True,
@@ -90,11 +90,11 @@ class Risk(models.Model):
     @property
     def risk_score(self):
         return self.likelihood * self.impact
-    
+
     def get_compliance_status(self):
         """Returns Compliant or Non-Compliant based on percentage"""
         return "Compliant" if self.compliance_percentage >= 80 else "Non-Compliant"
-    
+
     def get_compliance_color_class(self):
         """Returns CSS class based on compliance percentage"""
         if self.compliance_percentage >= 80:
@@ -103,7 +103,7 @@ class Risk(models.Model):
             return "medium"  # Orange
         else:
             return "low"  # Red
-    
+
     def update_compliance_from_evidence(self):
         """Update compliance percentage when evidence is uploaded"""
         if self.evidence_uploaded and self.evidence_file:
@@ -170,7 +170,7 @@ class Audit(models.Model):
         ('compliance', 'Compliance Review'),
         ('security', 'Security Audit'),
     ]
-    
+
     STATUS_CHOICES = [
         ('planned', 'Planned'),
         ('in_progress', 'In Progress'),
@@ -205,7 +205,7 @@ class Issue(models.Model):
         ('medium', 'Medium'),
         ('low', 'Low'),
     ]
-    
+
     STATUS_CHOICES = [
         ('open', 'Open'),
         ('in_progress', 'In Progress'),
@@ -278,10 +278,10 @@ class UserProfile(models.Model):
     """Extended user profile with department and role information"""
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
-    
+
     def __str__(self):
         return f"{self.user.username} - {self.department if self.department else 'No Department'}"
-    
+
     def can_manage_poams(self):
         """True if the user may create, edit and delete PO&AMs (see roles.py)."""
         return self.user.has_perms(

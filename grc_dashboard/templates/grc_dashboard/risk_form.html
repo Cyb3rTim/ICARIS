@@ -125,12 +125,12 @@
                 {% if risk and risk.evidence_file %}
                     <div style="margin-top: 8px;">
                         <small style="color: #86868b;">
-                            Current file: <a href="{{ risk.evidence_file.url }}" target="_blank" style="color: #2563eb;">{{ risk.evidence_file.name }}</a>
+                            Current file: <a href="{% url 'risk_evidence_download' risk.pk %}" style="color: #2563eb;">Download current evidence</a>
                         </small>
                     </div>
                 {% endif %}
                 <small style="color: #86868b; display: block; margin-top: 4px;">
-                    Upload evidence documents (PDF, Word, Excel, Images)
+                    Upload evidence documents (PDF, Office, CSV, TXT, MD, JPG, PNG - max 25 MB)
                 </small>
             </div>
 

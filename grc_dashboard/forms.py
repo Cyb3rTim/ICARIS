@@ -1,6 +1,9 @@
 # grc_dashboard/forms.py
 from django import forms
 from .models import Risk, ComplianceControl, Audit, Issue, Artifact
+from .validators import ALLOWED_EXTENSIONS
+
+ACCEPT_ATTR = ",".join(f".{ext}" for ext in ALLOWED_EXTENSIONS)
 
 class RiskForm(forms.ModelForm):
     class Meta:
@@ -96,5 +99,5 @@ class ArtifactForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
             'category': forms.Select(attrs={'class': 'form-control'}),
             'department': forms.Select(attrs={'class': 'form-control'}),
-            'file': forms.FileInput(attrs={'class': 'form-control'}),
+            'file': forms.FileInput(attrs={'class': 'form-control', 'accept': ACCEPT_ATTR}),
         }

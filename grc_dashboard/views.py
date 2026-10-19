@@ -2,7 +2,8 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth import logout
-from django.http import JsonResponse, HttpResponse
+from django.http import FileResponse, Http404, JsonResponse
+from django.views.decorators.http import require_GET
 from django.db.models import Count, Q, Avg
 from django.utils import timezone
 from django.contrib import messages
@@ -357,6 +358,7 @@ def artifact_create(request):
         if form.is_valid():
             artifact = form.save(commit=False)
             artifact.uploaded_by = request.user
+            artifact.original_filename = request.FILES['file'].name[:255]
             artifact.save()
             audit_log.record(request, 'create', artifact)
 
@@ -387,6 +389,48 @@ def artifact_delete(request, pk):
         return redirect('artifacts')
     
     return render(request, 'grc_dashboard/artifact_confirm_delete.html', {'artifact': artifact})
+
+
+INLINE_SAFE_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "txt"}
+
+
+def _serve_protected_file(request, field_file, download_name):
+    """Stream a stored upload to an authenticated user.
+
+    Uploaded files are never served from a public /media/ URL. Only formats a
+    browser renders safely may open inline; everything else downloads.
+    """
+    if not field_file:
+        raise Http404("No file attached.")
+    try:
+        handle = field_file.open("rb")
+    except FileNotFoundError as exc:
+        raise Http404("File is missing from storage.") from exc
+    ext = field_file.name.rsplit(".", 1)[-1].lower() if "." in field_file.name else ""
+    inline = request.GET.get("inline") == "1" and ext in INLINE_SAFE_EXTENSIONS
+    response = FileResponse(handle, as_attachment=not inline, filename=download_name)
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Content-Security-Policy"] = "default-src 'none'; sandbox"
+    response["Cache-Control"] = "private, no-store"
+    return response
+
+
+@login_required
+@require_GET
+def artifact_download(request, pk):
+    artifact = get_object_or_404(Artifact, pk=pk)
+    name = artifact.original_filename or f"{artifact.title}.{artifact.file_extension}"
+    audit_log.record(request, 'download', artifact)
+    return _serve_protected_file(request, artifact.file, name)
+
+
+@login_required
+@require_GET
+def risk_evidence_download(request, pk):
+    risk = get_object_or_404(Risk, pk=pk)
+    ext = risk.evidence_file.name.rsplit(".", 1)[-1] if risk.evidence_file else ""
+    audit_log.record(request, 'download', risk)
+    return _serve_protected_file(request, risk.evidence_file, f"conmon-{risk.pk}-evidence.{ext}")
 
 
 def user_guide(request):

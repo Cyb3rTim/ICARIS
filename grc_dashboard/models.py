@@ -6,6 +6,8 @@ from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+from .validators import RandomizedUploadPath, validate_evidence_file
+
 
 class Department(models.Model):
     name = models.CharField(max_length=100)
@@ -70,7 +72,8 @@ class Risk(models.Model):
     )
     
     evidence_file = models.FileField(
-        upload_to='compliance_evidence/',
+        upload_to=RandomizedUploadPath('compliance_evidence'),
+        validators=[validate_evidence_file],
         null=True,
         blank=True,
         help_text="Compliance evidence file",
@@ -245,7 +248,11 @@ class Artifact(models.Model):
     description = models.TextField(blank=True)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='artifacts')
-    file = models.FileField(upload_to='artifacts/%Y/%m/')
+    file = models.FileField(
+        upload_to=RandomizedUploadPath('artifacts'),
+        validators=[validate_evidence_file],
+    )
+    original_filename = models.CharField(max_length=255, blank=True, editable=False)
     uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='uploaded_artifacts')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

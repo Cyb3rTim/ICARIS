@@ -32,6 +32,8 @@ urlpatterns = [
     path('artifacts/', views.artifacts, name='artifacts'),
     path('artifacts/upload/', views.artifact_create, name='artifact_create'),
     path('artifacts/<int:pk>/delete/', views.artifact_delete, name='artifact_delete'),
+    path('artifacts/<int:pk>/download/', views.artifact_download, name='artifact_download'),
+    path('risks/<int:pk>/evidence/', views.risk_evidence_download, name='risk_evidence_download'),
 
     #Logout
     path('logout/', views.user_logout, name='logout')

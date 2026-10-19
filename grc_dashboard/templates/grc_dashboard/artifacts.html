@@ -508,8 +508,8 @@
                             {% endif %}
                         </div>
                         <div class="artifact-actions">
-                            <a href="{{ artifact.file.url }}" target="_blank">👁️ View</a>
-                            <a href="{{ artifact.file.url }}" download>⬇️ Download</a>
+                            <a href="{% url 'artifact_download' artifact.pk %}?inline=1" target="_blank" rel="noopener">👁️ View</a>
+                            <a href="{% url 'artifact_download' artifact.pk %}">⬇️ Download</a>
                             {% if perms.grc_dashboard.delete_artifact %}
                             <form method="post" action="{% url 'artifact_delete' artifact.pk %}" style="margin: 0;">
                                 {% csrf_token %}

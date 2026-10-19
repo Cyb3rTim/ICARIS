@@ -1,0 +1,71 @@
+{% extends 'grc_dashboard/base.html' %}
+
+{% block title %}Controls - ICARIS{% endblock %}
+
+{% block nav_controls %}active{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Compliance Controls</h1>
+        <p class="subtitle">Control status across compliance frameworks.</p>
+    </div>
+</div>
+
+<div class="filter-card">
+    <div class="filter-title">Filter Controls</div>
+    <form method="get" class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label">Framework</label>
+            <select name="framework" class="form-select">
+                <option value="">All Frameworks</option>
+                {% for fw in frameworks %}
+                <option value="{{ fw.pk }}" {% if framework_filter == fw.pk|stringformat:"s" %}selected{% endif %}>{{ fw.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-select">
+                <option value="">All Statuses</option>
+                <option value="compliant" {% if status_filter == 'compliant' %}selected{% endif %}>Compliant</option>
+                <option value="non_compliant" {% if status_filter == 'non_compliant' %}selected{% endif %}>Non-Compliant</option>
+                <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
+                <option value="not_assessed" {% if status_filter == 'not_assessed' %}selected{% endif %}>Not Assessed</option>
+            </select>
+        </div>
+        <div class="col-md-4 d-flex align-items-end gap-2">
+            <button type="submit" class="btn-filter flex-grow-1"><i class="fas fa-filter me-2"></i>Apply Filters</button>
+            <a href="{% url 'compliance_tracking' %}" class="btn-clear"><i class="fas fa-times"></i></a>
+        </div>
+    </form>
+</div>
+
+<div class="table-card">
+    <div class="table-header">
+        <div>
+            <div class="table-title">Controls</div>
+            <div class="table-subtitle">{{ controls|length }} control{{ controls|length|pluralize }} found</div>
+        </div>
+    </div>
+    <table class="custom-table">
+        <thead>
+            <tr><th>Control</th><th>Title</th><th>Framework</th><th>Department</th><th>Status</th><th>Next Assessment</th></tr>
+        </thead>
+        <tbody>
+            {% for control in controls %}
+            <tr>
+                <td><strong>{{ control.control_id }}</strong></td>
+                <td>{{ control.title }}</td>
+                <td>{{ control.framework.name }}</td>
+                <td>{{ control.department.name }}</td>
+                <td><span class="status-badge {% if control.status == 'compliant' %}compliant{% elif control.status == 'non_compliant' %}critical{% elif control.status == 'in_progress' %}in_progress{% else %}pending{% endif %}">{{ control.get_status_display }}</span></td>
+                <td>{{ control.next_assessment_date|default:"Not scheduled" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6"><div class="empty-state"><i class="fas fa-shield-alt"></i><p>No controls found.</p></div></td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

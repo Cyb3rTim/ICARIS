@@ -9,9 +9,10 @@ class RiskForm(forms.ModelForm):
     class Meta:
         model = Risk
         fields = [
-            'title', 'description', 'department', 'severity', 
-            'likelihood', 'impact', 'status', 'mitigation_plan',
-            'identified_date', 'target_closure_date'
+            'title', 'description', 'department', 'owner', 'severity',
+            'likelihood', 'impact', 'status', 'compliance_percentage',
+            'mitigation_plan', 'identified_date', 'target_closure_date',
+            'evidence_file',
         ]
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
@@ -24,6 +25,9 @@ class RiskForm(forms.ModelForm):
             'mitigation_plan': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
             'identified_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'target_closure_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'owner': forms.Select(attrs={'class': 'form-control'}),
+            'compliance_percentage': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'max': 100}),
+            'evidence_file': forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': ACCEPT_ATTR}),
         }
 
 

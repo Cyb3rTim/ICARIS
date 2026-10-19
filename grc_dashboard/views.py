@@ -78,33 +78,52 @@ def dashboard(request):
     return render(request, 'grc_dashboard/dashboard.html', context)
 
 
+COMPLIANT_THRESHOLD = 80
+
+
 @login_required
 def risk_register(request):
-    """Risk register view with filtering"""
-    risks = Risk.objects.select_related('department', 'owner').all()
-    
-    # Apply filters
-    severity_filter = request.GET.get('severity')
+    """ConMon requirement register with compliance filters and heat map."""
+    all_risks = Risk.objects.select_related('department', 'owner')
+    risks = all_risks
+
     status_filter = request.GET.get('status')
+    compliance_filter = request.GET.get('compliance')
     department_filter = request.GET.get('department')
-    
-    if severity_filter:
-        risks = risks.filter(severity=severity_filter)
-    if status_filter:
-        risks = risks.filter(status=status_filter)
-    if department_filter:
+
+    if status_filter == 'Compliant':
+        risks = risks.filter(compliance_percentage__gte=COMPLIANT_THRESHOLD)
+    elif status_filter == 'Non-Compliant':
+        risks = risks.filter(compliance_percentage__lt=COMPLIANT_THRESHOLD)
+
+    if compliance_filter == 'high':
+        risks = risks.filter(compliance_percentage__gte=80)
+    elif compliance_filter == 'medium':
+        risks = risks.filter(compliance_percentage__gte=50, compliance_percentage__lt=80)
+    elif compliance_filter == 'low':
+        risks = risks.filter(compliance_percentage__lt=50)
+
+    if department_filter and department_filter.isdigit():
         risks = risks.filter(department_id=department_filter)
-    
-    departments = Department.objects.all()
-    
+
+    avg = all_risks.aggregate(avg=Avg('compliance_percentage'))['avg'] or 0
+    heatmap = [
+        {'likelihood': r.likelihood, 'impact': r.impact}
+        for r in risks
+    ]
+
     context = {
         'risks': risks,
-        'departments': departments,
-        'severity_filter': severity_filter,
+        'departments': Department.objects.all(),
         'status_filter': status_filter,
         'department_filter': department_filter,
+        'total_risks': all_risks.count(),
+        'compliant_count': all_risks.filter(compliance_percentage__gte=COMPLIANT_THRESHOLD).count(),
+        'noncompliant_count': all_risks.filter(compliance_percentage__lt=COMPLIANT_THRESHOLD).count(),
+        'avg_compliance': round(avg),
+        'heatmap_data': heatmap,
     }
-    
+
     return render(request, 'grc_dashboard/risk_register.html', context)
 
 
@@ -179,24 +198,38 @@ def audit_management(request):
 
 @login_required
 def issue_tracking(request):
-    """Issue tracking view"""
-    issues = Issue.objects.select_related('department', 'assigned_to').all()
-    
-    # Apply filters
+    """PO&AM list with filters and live status counts."""
+    all_issues = Issue.objects.select_related('department', 'assigned_to')
+    issues = all_issues
+
     priority_filter = request.GET.get('priority')
     status_filter = request.GET.get('status')
-    
+    department_filter = request.GET.get('department')
+
     if priority_filter:
         issues = issues.filter(priority=priority_filter)
     if status_filter:
         issues = issues.filter(status=status_filter)
-    
+    if department_filter and department_filter.isdigit():
+        issues = issues.filter(department_id=department_filter)
+
+    today = timezone.now().date()
+    active = ['open', 'in_progress']
     context = {
         'issues': issues,
+        'departments': Department.objects.all(),
         'priority_filter': priority_filter,
         'status_filter': status_filter,
+        'department_filter': department_filter,
+        'today': today,
+        'stats': {
+            'total': all_issues.count(),
+            'open': all_issues.filter(status__in=active).count(),
+            'resolved': all_issues.filter(status__in=['resolved', 'closed']).count(),
+            'overdue': all_issues.filter(status__in=active, due_date__lt=today).count(),
+        },
     }
-    
+
     return render(request, 'grc_dashboard/issue_tracking.html', context)
 
 
@@ -234,15 +267,20 @@ def risk_update(request, pk):
     risk = get_object_or_404(Risk, pk=pk)
     
     if request.method == 'POST':
-        form = RiskForm(request.POST, instance=risk)
+        form = RiskForm(request.POST, request.FILES, instance=risk)
         if form.is_valid():
-            form.save()
+            risk = form.save(commit=False)
+            if 'evidence_file' in request.FILES:
+                risk.evidence_uploaded = True
+                risk.last_evidence_update = timezone.now()
+            risk.save()
             audit_log.record(request, 'update', risk)
+            messages.success(request, 'ConMon requirement updated.')
             return redirect('risk_register')
     else:
         form = RiskForm(instance=risk)
-    
-    return render(request, 'grc_dashboard/risk_form.html', {'form': form, 'action': 'Update'})
+
+    return render(request, 'grc_dashboard/risk_form.html', {'form': form, 'action': 'Update', 'risk': risk})
 
 
 @login_required
@@ -310,6 +348,7 @@ def issue_create(request):
                 issue.assigned_to = request.user
             issue.save()
             audit_log.record(request, 'create', issue)
+            messages.success(request, 'PO&AM created.')
             return redirect('issue_tracking')
     else:
         form = IssueForm()
@@ -327,6 +366,7 @@ def issue_update(request, pk):
         if form.is_valid():
             form.save()
             audit_log.record(request, 'update', issue)
+            messages.success(request, 'PO&AM updated.')
             return redirect('issue_tracking')
     else:
         form = IssueForm(instance=issue)

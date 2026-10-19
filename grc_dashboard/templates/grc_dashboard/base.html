@@ -800,6 +800,18 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a href="{% url 'compliance_tracking' %}" class="nav-link {% block nav_controls %}{% endblock %}">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Controls</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'audit_management' %}" class="nav-link {% block nav_audits %}{% endblock %}">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span>Audits</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="{% url 'user_guide' %}" class="nav-link {% block nav_user_guide %}{% endblock %}">
                     <i class="fas fa-book-open"></i>
                     <span>User Guide</span>

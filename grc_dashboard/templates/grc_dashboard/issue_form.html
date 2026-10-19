@@ -1,0 +1,43 @@
+{% extends 'grc_dashboard/base.html' %}
+
+{% block title %}{% if action == 'Create' %}New{% else %}Edit{% endif %} PO&AM - ICARIS{% endblock %}
+
+{% block nav_poams %}active{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{% if action == 'Create' %}New PO&AM{% else %}Edit PO&AM #{{ issue.pk }}{% endif %}</h1>
+        <p class="subtitle">{% if action == 'Create' %}Record a weakness and the plan to remediate it.{% else %}Update milestones, ownership and status.{% endif %}</p>
+    </div>
+</div>
+
+<div class="filter-card" style="max-width: 900px;">
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div style="color: #ef4444; margin-bottom: 12px;">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="row g-3">
+            {% for field in form %}
+            <div class="{% if field.name in 'title,description,resolution_notes' %}col-md-12{% else %}col-md-6{% endif %}">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                {{ field }}
+                {% if field.errors %}
+                    <div style="color: #ef4444; font-size: 13px; margin-top: 4px;">{{ field.errors }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <div class="col-md-12" style="margin-top: 24px;">
+                <button type="submit" class="btn-primary-custom">
+                    <i class="fas fa-save"></i> {% if action == 'Create' %}Create PO&AM{% else %}Save Changes{% endif %}
+                </button>
+                <a href="{% url 'issue_tracking' %}" class="btn-clear" style="margin-left: 12px;">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

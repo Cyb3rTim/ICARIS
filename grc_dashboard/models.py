@@ -50,7 +50,7 @@ class Risk(models.Model):
         help_text="Impact score (1-5)"
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
-    owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='owned_risks')
+    owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='owned_risks')
     mitigation_plan = models.TextField(blank=True)
     identified_date = models.DateField(default=timezone.now)
     target_closure_date = models.DateField(null=True, blank=True)
@@ -218,7 +218,7 @@ class Issue(models.Model):
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
     department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='issues')
-    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='assigned_issues')
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_issues')
     related_risk = models.ForeignKey(Risk, on_delete=models.SET_NULL, null=True, blank=True, related_name='issues')
     related_audit = models.ForeignKey(Audit, on_delete=models.SET_NULL, null=True, blank=True, related_name='issues')
     due_date = models.DateField(null=True, blank=True)

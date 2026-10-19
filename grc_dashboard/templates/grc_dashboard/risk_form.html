@@ -1,14 +1,14 @@
 {% extends 'grc_dashboard/base.html' %}
 
-{% block title %}Edit ConMon Requirement - ICARIS{% endblock %}
+{% block title %}{% if action == 'Create' %}New{% else %}Edit{% endif %} ConMon Requirement - ICARIS{% endblock %}
 
 {% block nav_conmons %}active{% endblock %}
 
 {% block content %}
 <div class="page-header">
     <div>
-        <h1>Edit ConMon Requirement</h1>
-        <p class="subtitle">Update compliance requirement details and evidence.</p>
+        <h1>{% if action == 'Create' %}New{% else %}Edit{% endif %} ConMon Requirement</h1>
+        <p class="subtitle">{% if action == 'Create' %}Add a continuous monitoring requirement.{% else %}Update compliance requirement details and evidence.{% endif %}</p>
     </div>
 </div>
 
@@ -136,7 +136,7 @@
 
             <div class="col-md-12" style="margin-top: 24px;">
                 <button type="submit" class="btn-primary-custom">
-                    <i class="fas fa-save"></i> Save Changes
+                    <i class="fas fa-save"></i> {% if action == 'Create' %}Create Requirement{% else %}Save Changes{% endif %}
                 </button>
                 <a href="{% url 'risk_register' %}" class="btn-clear" style="margin-left: 12px;">
                     <i class="fas fa-times"></i> Cancel

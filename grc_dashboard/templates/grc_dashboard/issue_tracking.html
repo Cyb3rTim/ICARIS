@@ -10,9 +10,11 @@
         <h1>Plans of Action & Milestones</h1>
         <p class="subtitle">Track and manage security action items and remediation tasks.</p>
     </div>
-    <a href="#" class="btn-primary-custom">
+    {% if perms.grc_dashboard.add_issue %}
+    <a href="{% url 'issue_create' %}" class="btn-primary-custom">
         <i class="fas fa-plus"></i>Add PO&AM
     </a>
+    {% endif %}
 </div>
 
 <!-- Stats Grid -->
@@ -21,7 +23,7 @@
         <div class="stat-icon critical">
             <i class="fas fa-exclamation-circle"></i>
         </div>
-        <div class="stat-value">{{ issues.count }}</div>
+        <div class="stat-value">{{ stats.total }}</div>
         <div class="stat-label">Total PO&AMs</div>
     </div>
 
@@ -29,7 +31,7 @@
         <div class="stat-icon pending">
             <i class="fas fa-clock"></i>
         </div>
-        <div class="stat-value">{{ issues|length }}</div>
+        <div class="stat-value">{{ stats.open }}</div>
         <div class="stat-label">Open Items</div>
     </div>
 
@@ -37,7 +39,7 @@
         <div class="stat-icon resolved">
             <i class="fas fa-check-circle"></i>
         </div>
-        <div class="stat-value">0</div>
+        <div class="stat-value">{{ stats.resolved }}</div>
         <div class="stat-label">Resolved</div>
     </div>
 
@@ -45,7 +47,7 @@
         <div class="stat-icon overdue">
             <i class="fas fa-calendar-times"></i>
         </div>
-        <div class="stat-value">0</div>
+        <div class="stat-value">{{ stats.overdue }}</div>
         <div class="stat-label">Overdue</div>
     </div>
 </div>
@@ -78,6 +80,9 @@
             <label class="form-label">Department</label>
             <select name="department" class="form-select">
                 <option value="">All Departments</option>
+                {% for dept in departments %}
+                <option value="{{ dept.pk }}" {% if department_filter == dept.pk|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+                {% endfor %}
             </select>
         </div>
         <div class="col-md-3 d-flex align-items-end gap-2">
@@ -128,16 +133,26 @@
                         {{ issue.get_status_display }}
                     </span>
                 </td>
-                <td>{{ issue.assigned_to.get_full_name|default:issue.assigned_to.username|default:"Unassigned" }}</td>
-                <td>{{ issue.due_date|default:"No deadline" }}</td>
+                <td>{% if issue.assigned_to %}{{ issue.assigned_to.get_full_name|default:issue.assigned_to.username }}{% else %}Unassigned{% endif %}</td>
+                <td>
+                    {% if issue.due_date %}
+                        {% if issue.due_date < today and issue.status in 'open,in_progress' %}
+                        <span class="status-badge critical" title="Overdue">{{ issue.due_date }}</span>
+                        {% else %}{{ issue.due_date }}{% endif %}
+                    {% else %}No deadline{% endif %}
+                </td>
                 <td>
                     <div class="d-flex gap-2">
-                        <a href="#" class="btn-action">
+                        {% if perms.grc_dashboard.change_issue %}
+                        <a href="{% url 'issue_update' issue.pk %}" class="btn-action" title="Edit PO&AM">
                             <i class="fas fa-edit"></i>
                         </a>
-                        <a href="#" class="btn-action delete">
+                        {% endif %}
+                        {% if perms.grc_dashboard.delete_issue %}
+                        <a href="{% url 'issue_delete' issue.pk %}" class="btn-action delete" title="Delete PO&AM">
                             <i class="fas fa-trash"></i>
                         </a>
+                        {% endif %}
                     </div>
                 </td>
             </tr>

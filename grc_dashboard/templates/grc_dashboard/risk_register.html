@@ -274,6 +274,11 @@
         <h1>Continuous Monitoring (ConMons)</h1>
         <p class="subtitle">Track compliance requirements and evidence uploads.</p>
     </div>
+    {% if perms.grc_dashboard.add_risk %}
+    <a href="{% url 'risk_create' %}" class="btn-primary-custom">
+        <i class="fas fa-plus"></i>Add Requirement
+    </a>
+    {% endif %}
 </div>
 
 <!-- Stats Grid -->
@@ -560,10 +565,11 @@
     </div>
 </div>
 
+{{ heatmap_data|json_script:"heatmap-data" }}
 <script>
-// Populate heatmap with risk data
+// Populate heatmap with risk data (json_script escapes safely; no |safe)
 document.addEventListener('DOMContentLoaded', function() {
-    const risks = {{ risks_json|safe }};
+    const risks = JSON.parse(document.getElementById('heatmap-data').textContent);
     
     // Count risks in each cell
     const cellCounts = {};

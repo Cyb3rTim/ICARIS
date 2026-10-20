@@ -10,14 +10,12 @@
     
     <title>{% block title %}ICARIS{% endblock %}</title>
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
-    
-    <!-- Font Awesome - Use CDN until you download local files -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Chart.js - Use CDN until you download local files -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <link rel="icon" type="image/svg+xml" href="{% static 'images/favicon.svg' %}">
+
+    <!-- Third-party assets are served locally (no CDN), so ICARIS works on
+         air-gapped networks and pages load no code from outside the app. -->
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
+    <script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
     
     <!-- Custom Styles -->
     <style>
@@ -761,6 +759,21 @@
             }
         }
 
+        /* Stat-card icon colors (shared by the POA&M, ConMon and ATO pages) */
+        .stat-card .stat-icon.blue { background: #eff6ff; color: #2563eb; }
+        .stat-card .stat-icon.green, .stat-card .stat-icon.resolved { background: #ecfdf5; color: #059669; }
+        .stat-card .stat-icon.red, .stat-card .stat-icon.critical { background: #fef2f2; color: #dc2626; }
+        .stat-card .stat-icon.orange, .stat-card .stat-icon.pending { background: #fff7ed; color: #ea580c; }
+        .stat-card .stat-icon.overdue { background: #fdf2f8; color: #be185d; }
+        a.btn-export, a.btn-primary-custom { text-decoration: none; }
+
+        /* Inline filter bar (ConMon register) */
+        .filter-form { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 6px; min-width: 200px; }
+        .filter-group label { font-size: 13px; font-weight: 500; color: #3a3a3c; }
+        .filter-select { padding: 9px 12px; border: 1px solid #d2d2d7; border-radius: 10px; background: #fff; font-size: 14px; }
+        textarea.form-control { font-family: inherit; }
+
         .flash-stack { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
         .flash { padding: 12px 16px; border-radius: 10px; font-size: 14px; border: 1px solid transparent; }
         .flash-success { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
@@ -797,7 +810,7 @@
             <li class="nav-item">
                 <a href="{% url 'issue_tracking' %}" class="nav-link {% block nav_poams %}{% endblock %}">
                     <i class="fas fa-tasks"></i>
-                    <span>PO&AMs</span>
+                    <span>POA&Ms</span>
                 </a>
             </li>
             <li class="nav-item">

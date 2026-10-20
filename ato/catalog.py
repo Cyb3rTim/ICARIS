@@ -77,8 +77,11 @@ def _param_text(param: dict | None) -> str:
         prefix = "one or more" if select.get("how-many") == "one-or-more" else ""
         joined = "; ".join(choices)
         return f"[Selection ({prefix}): {joined}]" if prefix else f"[Selection: {joined}]"
-    label = param.get("label") or "value"
-    return f"[Assignment: organization-defined {label}]"
+    label = (param.get("label") or "value").strip()
+    # NIST's Rev 5 parameter labels sometimes already begin with the phrase.
+    if not label.lower().startswith("organization-defined"):
+        label = f"organization-defined {label}"
+    return f"[Assignment: {label}]"
 
 
 def _render_parts(parts: list[dict], params: dict[str, dict], depth: int = 0) -> list[str]:

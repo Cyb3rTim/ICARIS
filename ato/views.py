@@ -68,7 +68,7 @@ def system_detail(request, pk):
         applicable = row["total"] - row["not_applicable"]
         row["percent"] = round(100 * row["implemented"] / applicable) if applicable else 100
 
-    page = Paginator(filtered, 50).get_page(request.GET.get("page"))
+    page = Paginator(filtered, 25).get_page(request.GET.get("page"))
     return render(request, "ato/system_detail.html", {
         "system": system,
         "summary": system.implementation_summary(),

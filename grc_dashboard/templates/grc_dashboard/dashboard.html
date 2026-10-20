@@ -8,15 +8,15 @@
 <div class="page-header">
     <div>
         <h1>Executive Dashboard</h1>
-        <p class="subtitle">System-wide compliance posture and risk overview.</p>
+        <p class="subtitle">Portfolio authorization posture and POA&amp;M health across all systems.</p>
     </div>
     <div class="header-actions">
-        <button class="btn-export">
-            <i class="fas fa-download"></i> Export Report
-        </button>
-        <button class="btn-primary-custom">
-            <i class="fas fa-cog"></i> Manage RFIs
-        </button>
+        <a class="btn-export" href="{% url 'poam_export' %}">
+            <i class="fas fa-download"></i> Export POA&amp;Ms (CSV)
+        </a>
+        <a class="btn-primary-custom" href="{% url 'ato:system_list' %}">
+            <i class="fas fa-server"></i> View Systems
+        </a>
     </div>
 </div>
 
@@ -24,73 +24,59 @@
 <div class="metrics-grid">
     <div class="metric-card">
         <div class="metric-header">
-            <div>
-                <div class="metric-title">Compliance Score</div>
-            </div>
-            <div class="metric-icon blue">
-                <i class="fas fa-chart-line"></i>
-            </div>
+            <div><div class="metric-title">Controls Implemented</div></div>
+            <div class="metric-icon blue"><i class="fas fa-shield-halved"></i></div>
         </div>
-        <div class="metric-value">{{ compliance_rate|floatformat:0 }}%</div>
+        <div class="metric-value">{{ percent_implemented }}%</div>
         <div class="metric-footer">
-            <span class="metric-change positive">
-                <i class="fas fa-arrow-up"></i> +2%
-            </span>
-            <span class="metric-label">vs. last month</span>
+            <span class="metric-label">{{ controls_tracked }} control{{ controls_tracked|pluralize }} tracked across {{ systems }} system{{ systems|pluralize }}</span>
         </div>
     </div>
 
     <div class="metric-card">
         <div class="metric-header">
-            <div>
-                <div class="metric-title">Open PO&AMs</div>
-            </div>
-            <div class="metric-icon orange">
-                <i class="fas fa-clipboard-list"></i>
-            </div>
+            <div><div class="metric-title">Open POA&amp;Ms</div></div>
+            <div class="metric-icon orange"><i class="fas fa-clipboard-list"></i></div>
         </div>
-        <div class="metric-value">{{ open_issues }}</div>
+        <div class="metric-value">{{ open_poam_count }}</div>
         <div class="metric-footer">
-            <span class="metric-change negative">
-                <i class="fas fa-arrow-down"></i> -1
-            </span>
-            <span class="metric-label">Requires attention</span>
+            {% if overdue_poam_count %}
+            <span class="metric-change negative"><i class="fas fa-triangle-exclamation"></i> {{ overdue_poam_count }}</span>
+            <span class="metric-label">past scheduled completion</span>
+            {% else %}
+            <span class="metric-change positive"><i class="fas fa-check"></i></span>
+            <span class="metric-label">None overdue</span>
+            {% endif %}
         </div>
     </div>
 
     <div class="metric-card">
         <div class="metric-header">
-            <div>
-                <div class="metric-title">Pending RFIs</div>
-            </div>
-            <div class="metric-icon red">
-                <i class="fas fa-exclamation-circle"></i>
-            </div>
+            <div><div class="metric-title">ATOs Ending &le; 180 Days</div></div>
+            <div class="metric-icon red"><i class="fas fa-hourglass-half"></i></div>
         </div>
-        <div class="metric-value">{{ critical_risks }}</div>
+        <div class="metric-value">{{ expiring|length }}</div>
         <div class="metric-footer">
-            <span class="metric-change neutral">
-                <i class="fas fa-minus"></i> 0
-            </span>
-            <span class="metric-label">Awaiting artifacts</span>
+            {% with next=expiring.0 %}
+            {% if next %}
+            <span class="metric-change {% if next.expiry_state == 'warning' %}neutral{% else %}negative{% endif %}"><i class="fas fa-calendar-xmark"></i></span>
+            <span class="metric-label">{{ next.system.acronym }} {% if next.days_until_expiration < 0 %}expired{% else %}in {{ next.days_until_expiration }} day{{ next.days_until_expiration|pluralize }}{% endif %}</span>
+            {% else %}
+            <span class="metric-change positive"><i class="fas fa-check"></i></span>
+            <span class="metric-label">No renewals due</span>
+            {% endif %}
+            {% endwith %}
         </div>
     </div>
 
     <div class="metric-card">
         <div class="metric-header">
-            <div>
-                <div class="metric-title">Total Systems</div>
-            </div>
-            <div class="metric-icon green">
-                <i class="fas fa-server"></i>
-            </div>
+            <div><div class="metric-title">Systems Authorized</div></div>
+            <div class="metric-icon green"><i class="fas fa-server"></i></div>
         </div>
-        <div class="metric-value">{{ total_controls|add:4 }}</div>
+        <div class="metric-value">{{ authorized }}<span style="font-size: 18px; color: #86868b; font-weight: 500;"> / {{ systems }}</span></div>
         <div class="metric-footer">
-            <span class="metric-change positive">
-                <i class="fas fa-arrow-up"></i> +1
-            </span>
-            <span class="metric-label">{{ total_controls }} Compliant</span>
+            <span class="metric-label">with a current ATO, ATU or IATT</span>
         </div>
     </div>
 </div>
@@ -99,206 +85,127 @@
 <div class="charts-grid">
     <div class="chart-card">
         <div class="chart-header">
-            <div class="chart-title">RFI & PO&AM Activity</div>
-            <div class="chart-subtitle">6-month trend of items opened vs closed</div>
+            <div class="chart-title">POA&amp;M Activity</div>
+            <div class="chart-subtitle">Opened vs. closed per month, last six months</div>
         </div>
         <div class="chart-container">
-            <canvas id="activityChart"></canvas>
+            <canvas id="activityChart" aria-label="POA&amp;M activity chart" role="img"></canvas>
         </div>
     </div>
 
     <div class="chart-card">
         <div class="chart-header">
-            <div class="chart-title">Risk Distribution</div>
-            <div class="chart-subtitle">Current open items by risk level</div>
+            <div class="chart-title">Open POA&amp;Ms by Priority</div>
+            <div class="chart-subtitle">Current remediation backlog</div>
         </div>
         <div class="chart-container">
-            <canvas id="riskChart"></canvas>
+            <canvas id="riskChart" aria-label="Open POA&amp;Ms by priority" role="img"></canvas>
         </div>
     </div>
 </div>
 
-<!-- Recent Action Items Table -->
+<!-- Upcoming POA&Ms -->
 <div class="table-card">
     <div class="table-header">
         <div>
-            <div class="table-title">Recent Action Items</div>
-            <div class="table-subtitle">Latest updates across all systems</div>
+            <div class="table-title">Next POA&amp;M Milestones</div>
+            <div class="table-subtitle">Open items ordered by scheduled completion</div>
         </div>
-        <a href="{% url 'risk_register' %}" class="view-all-link">View All</a>
+        <a href="{% url 'issue_tracking' %}" class="view-all-link">View All</a>
     </div>
     <table class="custom-table">
         <thead>
-            <tr>
-                <th>ID</th>
-                <th>Title</th>
-                <th>System</th>
-                <th>Status</th>
-                <th>Risk</th>
-                <th>Due Date</th>
-            </tr>
+            <tr><th>ID</th><th>Weakness</th><th>System</th><th>Control</th><th>Priority</th><th>Status</th><th>Due</th></tr>
         </thead>
         <tbody>
-            {% for risk in recent_risks %}
+            {% for poam in upcoming_poams %}
             <tr>
-                <td><strong>{{ risk.id }}</strong></td>
-                <td>{{ risk.title }}</td>
-                <td>{{ risk.department.name }}</td>
-                <td>
-                    <span class="status-badge {% if risk.status == 'closed' %}completed{% elif risk.status == 'open' %}pending{% else %}critical{% endif %}">
-                        {{ risk.get_status_display }}
-                    </span>
-                </td>
-                <td>
-                    <span class="status-badge {{ risk.severity }}">
-                        {{ risk.get_severity_display }}
-                    </span>
-                </td>
-                <td>{{ risk.target_closure_date|default:"N/A" }}</td>
+                <td><strong>#{{ poam.pk }}</strong></td>
+                <td>{{ poam.title }}</td>
+                <td>{% if poam.system %}<a href="{% url 'ato:system_detail' poam.system.pk %}">{{ poam.system.acronym }}</a>{% else %}—{% endif %}</td>
+                <td>{{ poam.control.label|default:"—" }}</td>
+                <td><span class="priority-badge {{ poam.priority }}">{{ poam.get_priority_display }}</span></td>
+                <td><span class="status-badge {{ poam.status }}">{{ poam.get_status_display }}</span></td>
+                <td>{% if poam.is_overdue %}<span class="status-badge critical" title="Overdue">{{ poam.due_date }}</span>{% else %}{{ poam.due_date }}{% endif %}</td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="6">
-                    <div class="empty-state">
-                        <i class="fas fa-inbox"></i>
-                        <p>No recent action items to display</p>
-                    </div>
+                <td colspan="7">
+                    <div class="empty-state"><i class="fas fa-inbox"></i><p>No open POA&amp;Ms with a scheduled completion date.</p></div>
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
+{{ activity|json_script:"activity-data" }}
+{{ priority|json_script:"priority-data" }}
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Activity Chart (Bar Chart)
-    const activityCtx = document.getElementById('activityChart').getContext('2d');
-    new Chart(activityCtx, {
+    const activity = JSON.parse(document.getElementById('activity-data').textContent);
+    const priority = JSON.parse(document.getElementById('priority-data').textContent);
+    const openTotal = priority.counts.reduce((a, b) => a + b, 0);
+
+    new Chart(document.getElementById('activityChart'), {
         type: 'bar',
         data: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-            datasets: [{
-                label: 'Opened',
-                data: [4, 3, 6, 2, 5, 3],
-                backgroundColor: '#2563eb',
-                borderRadius: 6,
-                barThickness: 24,
-            }, {
-                label: 'Closed',
-                data: [2, 5, 3, 4, 6, 2],
-                backgroundColor: '#d1d5db',
-                borderRadius: 6,
-                barThickness: 24,
-            }]
+            labels: activity.labels,
+            datasets: [
+                { label: 'Opened', data: activity.opened, backgroundColor: '#2563eb', borderRadius: 6, barThickness: 24 },
+                { label: 'Closed', data: activity.closed, backgroundColor: '#10b981', borderRadius: 6, barThickness: 24 },
+            ],
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
+            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 16 } } },
             scales: {
-                y: {
-                    beginAtZero: true,
-                    border: {
-                        display: false
-                    },
-                    grid: {
-                        color: '#f5f5f7'
-                    }
-                },
-                x: {
-                    border: {
-                        display: false
-                    },
-                    grid: {
-                        display: false
-                    }
-                }
-            }
-        }
+                y: { beginAtZero: true, ticks: { precision: 0 }, border: { display: false }, grid: { color: '#f5f5f7' } },
+                x: { border: { display: false }, grid: { display: false } },
+            },
+        },
     });
 
-    // Risk Distribution (Doughnut Chart) - WITH REAL DATA
-    const riskCtx = document.getElementById('riskChart').getContext('2d');
-
-    // Build data from Django context
-    const riskData = {
-        'low': 0,
-        'medium': 0,
-        'high': 0,
-        'critical': 0
-    };
-
-    // Populate from server data
-    {% for item in risks_by_severity %}
-        riskData['{{ item.severity }}'] = {{ item.count }};
-    {% endfor %}
-
-    new Chart(riskCtx, {
+    new Chart(document.getElementById('riskChart'), {
         type: 'doughnut',
         data: {
-            labels: ['Low', 'Moderate', 'High', 'Critical'],
+            labels: priority.labels,
             datasets: [{
-                data: [
-                    riskData.low,
-                    riskData.medium,
-                    riskData.high,
-                    riskData.critical
-                ],
-                backgroundColor: [
-                    '#22c55e',
-                    '#f97316',
-                    '#ef4444',
-                    '#991b1b'
-                ],
-                borderWidth: 0
-            }]
+                data: openTotal ? priority.counts : [1],
+                backgroundColor: openTotal ? ['#22c55e', '#f59e0b', '#ef4444', '#991b1b'] : ['#e5e5ea'],
+                borderWidth: 0,
+            }],
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             cutout: '75%',
             plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 20,
-                        usePointStyle: true,
-                        pointStyle: 'circle'
-                    }
-                }
-            }
+                legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true, pointStyle: 'circle' } },
+                tooltip: { enabled: openTotal > 0 },
+            },
         },
         plugins: [{
             id: 'centerText',
-            beforeDraw: function(chart) {
-                const width = chart.width;
-                const height = chart.height;
-                const ctx = chart.ctx;
-                ctx.restore();
-                const fontSize = (height / 160).toFixed(2);
-                ctx.font = fontSize + "em sans-serif";
-                ctx.textBaseline = "middle";
-                const text = "{{ open_risks }}";
-                const textX = Math.round((width - ctx.measureText(text).width) / 2);
-                const textY = height / 2 - 10;
-                ctx.fillStyle = '#1d1d1f';
-                ctx.font = 'bold ' + (fontSize * 2) + 'em sans-serif';
-                ctx.fillText(text, textX, textY);
-                
-                ctx.font = (fontSize * 0.6) + 'em sans-serif';
-                ctx.fillStyle = '#86868b';
-                const subText = "OPEN RISKS";
-                const subTextX = Math.round((width - ctx.measureText(subText).width) / 2);
-                ctx.fillText(subText, subTextX, textY + 30);
+            afterDraw(chart) {
+                const { ctx, chartArea } = chart;
+                const x = (chartArea.left + chartArea.right) / 2;
+                const y = (chartArea.top + chartArea.bottom) / 2;
                 ctx.save();
-            }
-        }]
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#1d1d1f';
+                ctx.font = 'bold 40px -apple-system, "Segoe UI", sans-serif';
+                ctx.fillText(String(openTotal), x, y - 10);
+                ctx.fillStyle = '#86868b';
+                ctx.font = '13px -apple-system, "Segoe UI", sans-serif';
+                ctx.fillText('OPEN POA&MS', x, y + 22);
+                ctx.restore();
+            },
+        }],
     });
 </script>
 {% endblock %}

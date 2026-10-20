@@ -323,7 +323,8 @@ class PackageDocument(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["package", "doc_type"]
+        # Creation order follows DEFAULT_REQUIRED: categorization, SSP, SAP, SAR, POA&M, ...
+        ordering = ["package", "id"]
         constraints = [
             models.UniqueConstraint(
                 fields=["package", "doc_type"], condition=~Q(doc_type="other"), name="one_of_each_doc_type"

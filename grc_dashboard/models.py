@@ -245,6 +245,27 @@ class Issue(models.Model):
     resolution_notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    closed_at = models.DateTimeField(
+        null=True, blank=True, editable=False,
+        help_text="Set automatically when the POA&M is resolved or closed",
+    )
+
+    CLOSED_STATUSES = ('resolved', 'closed')
+
+    def save(self, *args, **kwargs):
+        if self.status in self.CLOSED_STATUSES and self.closed_at is None:
+            self.closed_at = timezone.now()
+        elif self.status not in self.CLOSED_STATUSES:
+            self.closed_at = None
+        super().save(*args, **kwargs)
+
+    @property
+    def is_overdue(self) -> bool:
+        return (
+            self.status not in self.CLOSED_STATUSES
+            and self.due_date is not None
+            and self.due_date < timezone.localdate()
+        )
 
     def __str__(self):
         return f"{self.title} ({self.priority})"
@@ -303,7 +324,7 @@ class UserProfile(models.Model):
         return f"{self.user.username} - {self.department if self.department else 'No Department'}"
 
     def can_manage_poams(self):
-        """True if the user may create, edit and delete PO&AMs (see roles.py)."""
+        """True if the user may create, edit and delete POA&Ms (see roles.py)."""
         return self.user.has_perms(
             ["grc_dashboard.add_issue", "grc_dashboard.change_issue", "grc_dashboard.delete_issue"]
         )

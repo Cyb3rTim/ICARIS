@@ -22,6 +22,7 @@ SAMPLE_CATALOG = {
                              "label": "personnel or roles"},
                             {"id": "ac-02_odp.02", "select": {"how-many": "one-or-more",
                                                               "choice": ["disable", "remove"]}},
+                            {"id": "ac-02_odp.03", "label": "organization-defined time period"},
                         ],
                         "props": [
                             {"name": "label", "value": "AC-02", "class": "zero-padded"},
@@ -34,6 +35,8 @@ SAMPLE_CATALOG = {
                                  "prose": "Require approvals by {{ insert: param, ac-2_prm_1 }};"},
                                 {"id": "ac-2_smt.b", "name": "item", "props": [{"name": "label", "value": "b."}],
                                  "prose": "{{ insert: param, ac-02_odp.02 }} accounts when no longer needed."},
+                                {"id": "ac-2_smt.c", "name": "item", "props": [{"name": "label", "value": "c."}],
+                                 "prose": "Review accounts every {{ insert: param, ac-02_odp.03 }}."},
                             ]},
                             {"id": "ac-2_gdn", "name": "guidance", "prose": "Guidance is not part of the statement."},
                         ],
@@ -74,6 +77,8 @@ class ParserTests(SimpleTestCase):
         statement = self.by_id["ac-2"].statement
         self.assertIn("a. Require approvals by [Assignment: organization-defined personnel or roles];", statement)
         self.assertIn("b. [Selection (one or more): disable; remove] accounts", statement)
+        self.assertIn("c. Review accounts every [Assignment: organization-defined time period].", statement)
+        self.assertNotIn("organization-defined organization-defined", statement)
         self.assertNotIn("Guidance", statement)
 
     def test_withdrawn_flag(self):

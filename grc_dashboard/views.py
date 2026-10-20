@@ -1,11 +1,13 @@
 # grc_dashboard/views.py
-from datetime import timedelta
+import csv
+from collections import Counter
+from datetime import date, datetime, time
 
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required, permission_required
-from django.db.models import Avg, Count
-from django.http import FileResponse, Http404, JsonResponse
+from django.db.models import Avg, Count, Q
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
@@ -15,68 +17,74 @@ from .forms import IssueForm, RiskForm
 from .models import Artifact, Audit, ComplianceControl, Department, Issue, Risk
 
 
+def _month_starts(today, count=6):
+    """First day of each of the last `count` months, oldest first."""
+    months = []
+    year, month = today.year, today.month
+    for _ in range(count):
+        months.append(date(year, month, 1))
+        month -= 1
+        if month == 0:
+            year, month = year - 1, 12
+    return list(reversed(months))
+
+
 @login_required
 def dashboard(request):
-    """Main GRC dashboard with key metrics and visualizations"""
+    """Executive dashboard: portfolio ATO posture and POA&M health, all from live data."""
+    from ato.models import ControlImplementation
+    from ato.services import ato_summary
 
-    # Risk metrics
-    total_risks = Risk.objects.count()
-    critical_risks = Risk.objects.filter(severity='critical', status__in=['open', 'in_progress']).count()
-    open_risks = Risk.objects.filter(status='open').count()
+    today = timezone.localdate()
+    active = ['open', 'in_progress']
 
-    # Compliance metrics
-    total_controls = ComplianceControl.objects.count()
-    compliant_controls = ComplianceControl.objects.filter(status='compliant').count()
-    non_compliant_controls = ComplianceControl.objects.filter(status='non_compliant').count()
-    compliance_rate = (compliant_controls / total_controls * 100) if total_controls > 0 else 0
+    impl = ControlImplementation.objects.aggregate(
+        total=Count('id'),
+        implemented=Count('id', filter=Q(status=ControlImplementation.Status.IMPLEMENTED)),
+        not_applicable=Count('id', filter=Q(status=ControlImplementation.Status.NOT_APPLICABLE)),
+    )
+    applicable = impl['total'] - impl['not_applicable']
+    percent_implemented = round(100 * impl['implemented'] / applicable) if applicable else 0
 
-    # Audit metrics
-    total_audits = Audit.objects.count()
-    upcoming_audits = Audit.objects.filter(
-        status='planned',
-        start_date__lte=timezone.now().date() + timedelta(days=30)
-    ).count()
-    in_progress_audits = Audit.objects.filter(status='in_progress').count()
+    open_poams = Issue.objects.filter(status__in=active)
+    portfolio = ato_summary()
 
-    # Issue metrics
-    total_issues = Issue.objects.count()
-    open_issues = Issue.objects.filter(status__in=['open', 'in_progress']).count()
-    overdue_issues = Issue.objects.filter(
-        status__in=['open', 'in_progress'],
-        due_date__lt=timezone.now().date()
-    ).count()
-
-    # Risk by severity
-    risks_by_severity = Risk.objects.values('severity').annotate(count=Count('id'))
-
-    # Compliance by status
-    compliance_by_status = ComplianceControl.objects.values('status').annotate(count=Count('id'))
-
-    # Recent activities
-    recent_risks = Risk.objects.select_related('department', 'owner').order_by('-created_at')[:5]
-    recent_audits = Audit.objects.select_related('department', 'auditor').order_by('-created_at')[:5]
-    recent_issues = Issue.objects.select_related('department', 'assigned_to').order_by('-created_at')[:5]
-
-    context = {
-        'total_risks': total_risks,
-        'critical_risks': critical_risks,
-        'open_risks': open_risks,
-        'total_controls': total_controls,
-        'compliance_rate': round(compliance_rate, 1),
-        'non_compliant_controls': non_compliant_controls,
-        'total_audits': total_audits,
-        'upcoming_audits': upcoming_audits,
-        'in_progress_audits': in_progress_audits,
-        'total_issues': total_issues,
-        'open_issues': open_issues,
-        'overdue_issues': overdue_issues,
-        'risks_by_severity': risks_by_severity,
-        'compliance_by_status': compliance_by_status,
-        'recent_risks': recent_risks,
-        'recent_audits': recent_audits,
-        'recent_issues': recent_issues,
+    # POA&M activity: opened vs closed per month for the last six months.
+    months = _month_starts(today)
+    window_start = timezone.make_aware(datetime.combine(months[0], time.min))
+    opened = Counter(
+        timezone.localtime(ts).date().replace(day=1)
+        for ts in Issue.objects.filter(created_at__gte=window_start).values_list('created_at', flat=True)
+    )
+    closed = Counter(
+        timezone.localtime(ts).date().replace(day=1)
+        for ts in Issue.objects.filter(closed_at__gte=window_start).values_list('closed_at', flat=True)
+    )
+    activity = {
+        'labels': [m.strftime('%b') for m in months],
+        'opened': [opened.get(m, 0) for m in months],
+        'closed': [closed.get(m, 0) for m in months],
     }
 
+    by_priority = dict(open_poams.values_list('priority').annotate(n=Count('id')))
+    priority = {
+        'labels': ['Low', 'Medium', 'High', 'Critical'],
+        'counts': [by_priority.get(p, 0) for p in ('low', 'medium', 'high', 'critical')],
+    }
+
+    context = {
+        'percent_implemented': percent_implemented,
+        'controls_tracked': impl['total'],
+        'open_poam_count': open_poams.count(),
+        'overdue_poam_count': open_poams.filter(due_date__lt=today).count(),
+        'systems': portfolio['systems'],
+        'authorized': portfolio['authorized'],
+        'expiring': portfolio['expiring'],
+        'activity': activity,
+        'priority': priority,
+        'upcoming_poams': open_poams.select_related('system', 'control')
+            .exclude(due_date__isnull=True).order_by('due_date')[:8],
+    }
     return render(request, 'grc_dashboard/dashboard.html', context)
 
 
@@ -200,8 +208,8 @@ def audit_management(request):
 
 @login_required
 def issue_tracking(request):
-    """PO&AM list with filters and live status counts."""
-    all_issues = Issue.objects.select_related('department', 'assigned_to')
+    """POA&M list with filters and live status counts."""
+    all_issues = Issue.objects.select_related('department', 'assigned_to', 'system', 'control')
     issues = all_issues
 
     priority_filter = request.GET.get('priority')
@@ -350,7 +358,7 @@ def issue_create(request):
                 issue.assigned_to = request.user
             issue.save()
             audit_log.record(request, 'create', issue)
-            messages.success(request, 'PO&AM created.')
+            messages.success(request, 'POA&M created.')
             return redirect('issue_tracking')
     else:
         form = IssueForm()
@@ -368,7 +376,7 @@ def issue_update(request, pk):
         if form.is_valid():
             form.save()
             audit_log.record(request, 'update', issue)
-            messages.success(request, 'PO&AM updated.')
+            messages.success(request, 'POA&M updated.')
             return redirect('issue_tracking')
     else:
         form = IssueForm(instance=issue)
@@ -473,6 +481,58 @@ def risk_evidence_download(request, pk):
     ext = risk.evidence_file.name.rsplit(".", 1)[-1] if risk.evidence_file else ""
     audit_log.record(request, 'download', risk)
     return _serve_protected_file(request, risk.evidence_file, f"conmon-{risk.pk}-evidence.{ext}")
+
+
+POAM_EXPORT_COLUMNS = [
+    "POA&M ID", "System", "Control", "Weakness", "Description", "Source", "Priority",
+    "Status", "Assigned To", "Scheduled Completion", "Overdue", "Closed", "Resolution Notes", "Created",
+]
+
+
+def _csv_safe(value) -> str:
+    """Neutralize spreadsheet formula injection (CWE-1236) in exported cells."""
+    text = "" if value is None else str(value)
+    if text[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + text
+    return text
+
+
+@login_required
+@require_GET
+def poam_export(request):
+    """Download all POA&Ms (respecting the list filters) as CSV."""
+    issues = Issue.objects.select_related("system", "control", "assigned_to").order_by("pk")
+    for param, field in (("priority", "priority"), ("status", "status")):
+        if request.GET.get(param):
+            issues = issues.filter(**{field: request.GET[param]})
+    if request.GET.get("department", "").isdigit():
+        issues = issues.filter(department_id=request.GET["department"])
+
+    stamp = timezone.localdate().isoformat()
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="icaris-poams-{stamp}.csv"'
+    response["Cache-Control"] = "private, no-store"
+    writer = csv.writer(response)
+    writer.writerow(POAM_EXPORT_COLUMNS)
+    for issue in issues:
+        writer.writerow([_csv_safe(v) for v in (
+            f"POAM-{issue.pk:04d}",
+            issue.system.acronym if issue.system else "",
+            issue.control.label if issue.control else "",
+            issue.title,
+            issue.description,
+            issue.get_source_display(),
+            issue.get_priority_display(),
+            issue.get_status_display(),
+            issue.assigned_to.get_full_name() or issue.assigned_to.username if issue.assigned_to else "",
+            issue.due_date.isoformat() if issue.due_date else "",
+            "Yes" if issue.is_overdue else "No",
+            timezone.localtime(issue.closed_at).date().isoformat() if issue.closed_at else "",
+            issue.resolution_notes,
+            timezone.localtime(issue.created_at).date().isoformat(),
+        )])
+    audit_log.record(request, "export", Issue())
+    return response
 
 
 def user_guide(request):

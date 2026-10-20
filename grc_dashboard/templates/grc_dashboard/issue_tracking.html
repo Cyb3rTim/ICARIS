@@ -1,6 +1,6 @@
 {% extends 'grc_dashboard/base.html' %}
 
-{% block title %}PO&AMs - ICARIS{% endblock %}
+{% block title %}POA&Ms - ICARIS{% endblock %}
 
 {% block nav_poams %}active{% endblock %}
 
@@ -12,7 +12,7 @@
     </div>
     {% if perms.grc_dashboard.add_issue %}
     <a href="{% url 'issue_create' %}" class="btn-primary-custom">
-        <i class="fas fa-plus"></i>Add PO&AM
+        <i class="fas fa-plus"></i>Add POA&M
     </a>
     {% endif %}
 </div>
@@ -24,7 +24,7 @@
             <i class="fas fa-exclamation-circle"></i>
         </div>
         <div class="stat-value">{{ stats.total }}</div>
-        <div class="stat-label">Total PO&AMs</div>
+        <div class="stat-label">Total POA&Ms</div>
     </div>
 
     <div class="stat-card">
@@ -54,7 +54,7 @@
 
 <!-- Filters -->
 <div class="filter-card">
-    <div class="filter-title">Filter PO&AMs</div>
+    <div class="filter-title">Filter POA&Ms</div>
     <form method="get" class="row g-3">
         <div class="col-md-3">
             <label class="form-label">Priority Level</label>
@@ -96,11 +96,11 @@
     </form>
 </div>
 
-<!-- PO&AMs Table -->
+<!-- POA&Ms Table -->
 <div class="table-card">
     <div class="table-header">
         <div>
-            <div class="table-title">All PO&AMs</div>
+            <div class="table-title">All POA&Ms</div>
             <div class="table-subtitle">{{ issues.count }} item{{ issues.count|pluralize }} found</div>
         </div>
     </div>
@@ -108,8 +108,9 @@
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Title</th>
-                <th>Department</th>
+                <th>Weakness</th>
+                <th>System</th>
+                <th>Control</th>
                 <th>Priority</th>
                 <th>Status</th>
                 <th>Assigned To</th>
@@ -122,7 +123,8 @@
             <tr>
                 <td><strong>#{{ issue.id }}</strong></td>
                 <td>{{ issue.title }}</td>
-                <td>{{ issue.department.name }}</td>
+                <td>{% if issue.system %}<a href="{% url 'ato:system_detail' issue.system.pk %}">{{ issue.system.acronym }}</a>{% else %}—{% endif %}</td>
+                <td>{{ issue.control.label|default:"—" }}</td>
                 <td>
                     <span class="priority-badge {{ issue.priority }}">
                         {{ issue.get_priority_display }}
@@ -144,12 +146,12 @@
                 <td>
                     <div class="d-flex gap-2">
                         {% if perms.grc_dashboard.change_issue %}
-                        <a href="{% url 'issue_update' issue.pk %}" class="btn-action" title="Edit PO&AM">
+                        <a href="{% url 'issue_update' issue.pk %}" class="btn-action" title="Edit POA&M">
                             <i class="fas fa-edit"></i>
                         </a>
                         {% endif %}
                         {% if perms.grc_dashboard.delete_issue %}
-                        <a href="{% url 'issue_delete' issue.pk %}" class="btn-action delete" title="Delete PO&AM">
+                        <a href="{% url 'issue_delete' issue.pk %}" class="btn-action delete" title="Delete POA&M">
                             <i class="fas fa-trash"></i>
                         </a>
                         {% endif %}
@@ -158,10 +160,10 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="8">
+                <td colspan="9">
                     <div class="empty-state">
                         <i class="fas fa-inbox"></i>
-                        <p>No PO&AMs found. Create your first action item to get started.</p>
+                        <p>No POA&Ms found. Create your first action item to get started.</p>
                     </div>
                 </td>
             </tr>

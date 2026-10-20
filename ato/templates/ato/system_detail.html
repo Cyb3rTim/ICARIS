@@ -62,7 +62,45 @@
 </div>
 {% endif %}
 
-<div class="split">
+<div class="grid-3">
+    <div class="panel">
+            <h2>System profile</h2>
+            <dl class="kv">
+                <dt>Environment</dt><dd>{{ system.get_environment_display }}</dd>
+                <dt>System owner</dt><dd>{% if system.system_owner %}{{ system.system_owner.get_full_name|default:system.system_owner.username }}{% else %}—{% endif %}</dd>
+                <dt>ISSO</dt><dd>{% if system.isso %}{{ system.isso.get_full_name|default:system.isso.username }}{% else %}—{% endif %}</dd>
+                <dt>Authorizing official</dt><dd>{{ system.authorizing_official|default:"—" }}</dd>
+            </dl>
+            {% if system.description %}<p style="margin:14px 0 0; font-size:14px; color:#3a3a3c;">{{ system.description }}</p>{% endif %}
+        </div>
+    <div class="panel">
+            <h2>Authorization packages</h2>
+            {% for pkg in packages %}
+                <div style="padding:10px 0; border-bottom:1px solid #f0f0f2;">
+                    <a href="{% url 'ato:package_detail' pkg.pk %}"><strong>{{ pkg.name }}</strong></a>
+                    <div class="meta-row" style="margin-top:4px;">
+                        <span class="pill">{{ pkg.get_status_display }}</span>
+                        {% if pkg.decision %}<span class="pill">{{ pkg.get_decision_display }}</span>{% include 'ato/_expiry_pill.html' with pkg=pkg %}{% endif %}
+                    </div>
+                </div>
+            {% empty %}
+                <p style="color:#86868b; font-size:14px; margin:0;">No packages yet.</p>
+            {% endfor %}
+        </div>
+    <div class="panel">
+            <h2>Open POA&amp;Ms</h2>
+            {% for poam in poams %}
+                <div style="padding:8px 0; border-bottom:1px solid #f0f0f2; font-size:14px;">
+                    <span class="priority-badge {{ poam.priority }}">{{ poam.get_priority_display }}</span>
+                    {{ poam.title }}{% if poam.control %} <span style="color:#86868b;">({{ poam.control.label }})</span>{% endif %}
+                </div>
+            {% empty %}
+                <p style="color:#86868b; font-size:14px; margin:0;">No open POA&amp;Ms linked to this system.</p>
+            {% endfor %}
+        </div>
+</div>
+
+<div class="split-wide">
     <div>
         <div class="table-card">
             <div class="table-header">
@@ -93,15 +131,15 @@
                 </div>
             </form>
             <table class="custom-table">
-                <thead><tr><th>Control</th><th>Title</th><th>Status</th><th>Origination</th><th>Assessment</th><th></th></tr></thead>
+                <thead><tr><th class="nowrap">Control</th><th>Title</th><th class="nowrap">Status</th><th class="nowrap">Origination</th><th class="nowrap">Assessment</th><th></th></tr></thead>
                 <tbody>
                 {% for impl in page %}
                     <tr>
-                        <td><a href="{% url 'ato:control_detail' impl.control.control_id %}"><strong>{{ impl.control.label }}</strong></a></td>
+                        <td class="nowrap"><a href="{% url 'ato:control_detail' impl.control.control_id %}"><strong>{{ impl.control.label }}</strong></a></td>
                         <td>{{ impl.control.title }}</td>
-                        <td><span class="status-badge {% if impl.status == 'implemented' %}compliant{% elif impl.status == 'not_applicable' %}closed{% elif impl.status == 'not_started' %}critical{% else %}in_progress{% endif %}">{{ impl.get_status_display }}</span></td>
-                        <td>{{ impl.get_origination_display }}</td>
-                        <td>{% if impl.assessment_result == 'satisfied' %}<span class="pill ok">Satisfied</span>{% elif impl.assessment_result == 'other_than_satisfied' %}<span class="pill critical">Other than satisfied</span>{% else %}<span class="pill none">Not assessed</span>{% endif %}</td>
+                        <td class="nowrap"><span class="status-badge {% if impl.status == 'implemented' %}compliant{% elif impl.status == 'not_applicable' %}closed{% elif impl.status == 'not_started' %}critical{% else %}in_progress{% endif %}">{{ impl.get_status_display }}</span></td>
+                        <td class="nowrap">{{ impl.get_origination_display }}</td>
+                        <td class="nowrap">{% if impl.assessment_result == 'satisfied' %}<span class="pill ok">Satisfied</span>{% elif impl.assessment_result == 'other_than_satisfied' %}<span class="pill critical">Other than satisfied</span>{% else %}<span class="pill none">Not assessed</span>{% endif %}</td>
                         <td>{% if perms.ato.change_controlimplementation %}<a class="btn-action" href="{% url 'ato:implementation_update' impl.pk %}" title="Edit implementation"><i class="fas fa-edit"></i></a>{% endif %}</td>
                     </tr>
                 {% empty %}
@@ -115,32 +153,6 @@
 
     <div>
         <div class="panel">
-            <h2>System profile</h2>
-            <dl class="kv">
-                <dt>Environment</dt><dd>{{ system.get_environment_display }}</dd>
-                <dt>System owner</dt><dd>{% if system.system_owner %}{{ system.system_owner.get_full_name|default:system.system_owner.username }}{% else %}—{% endif %}</dd>
-                <dt>ISSO</dt><dd>{% if system.isso %}{{ system.isso.get_full_name|default:system.isso.username }}{% else %}—{% endif %}</dd>
-                <dt>Authorizing official</dt><dd>{{ system.authorizing_official|default:"—" }}</dd>
-            </dl>
-            {% if system.description %}<p style="margin:14px 0 0; font-size:14px; color:#3a3a3c;">{{ system.description }}</p>{% endif %}
-        </div>
-
-        <div class="panel">
-            <h2>Authorization packages</h2>
-            {% for pkg in packages %}
-                <div style="padding:10px 0; border-bottom:1px solid #f0f0f2;">
-                    <a href="{% url 'ato:package_detail' pkg.pk %}"><strong>{{ pkg.name }}</strong></a>
-                    <div class="meta-row" style="margin-top:4px;">
-                        <span class="pill">{{ pkg.get_status_display }}</span>
-                        {% if pkg.decision %}<span class="pill">{{ pkg.get_decision_display }}</span>{% include 'ato/_expiry_pill.html' with pkg=pkg %}{% endif %}
-                    </div>
-                </div>
-            {% empty %}
-                <p style="color:#86868b; font-size:14px; margin:0;">No packages yet.</p>
-            {% endfor %}
-        </div>
-
-        <div class="panel">
             <h2>Coverage by family</h2>
             {% for row in coverage %}
                 <div class="family-row" title="{{ row.control__family__title }}">
@@ -150,18 +162,6 @@
                 </div>
             {% empty %}
                 <p style="color:#86868b; font-size:14px; margin:0;">Apply a baseline to see coverage.</p>
-            {% endfor %}
-        </div>
-
-        <div class="panel">
-            <h2>Open POA&amp;Ms</h2>
-            {% for poam in poams %}
-                <div style="padding:8px 0; border-bottom:1px solid #f0f0f2; font-size:14px;">
-                    <span class="priority-badge {{ poam.priority }}">{{ poam.get_priority_display }}</span>
-                    {{ poam.title }}{% if poam.control %} <span style="color:#86868b;">({{ poam.control.label }})</span>{% endif %}
-                </div>
-            {% empty %}
-                <p style="color:#86868b; font-size:14px; margin:0;">No open POA&amp;Ms linked to this system.</p>
             {% endfor %}
         </div>
     </div>

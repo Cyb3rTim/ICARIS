@@ -1,13 +1,13 @@
 {% extends 'grc_dashboard/base.html' %}
 
-{% block title %}Delete PO&AM - ICARIS{% endblock %}
+{% block title %}Delete POA&M - ICARIS{% endblock %}
 
 {% block nav_poams %}active{% endblock %}
 
 {% block content %}
 <div class="page-header">
     <div>
-        <h1>Delete PO&AM</h1>
+        <h1>Delete POA&M</h1>
         <p class="subtitle">Confirm deletion of this action item.</p>
     </div>
 </div>
@@ -17,7 +17,7 @@
         <i class="fas fa-exclamation-triangle" style="font-size: 64px; color: #ef4444; margin-bottom: 20px;"></i>
         <h3 style="margin-bottom: 16px;">Are you sure?</h3>
         <p style="color: #86868b; margin-bottom: 24px;">
-            Delete PO&AM #{{ issue.pk }} "<strong>{{ issue.title }}</strong>"?<br>
+            Delete POA&M #{{ issue.pk }} "<strong>{{ issue.title }}</strong>"?<br>
             Closing it with resolution notes keeps the audit trail; deleting cannot be undone.
         </p>
         <form method="post" style="display: inline-block;">
